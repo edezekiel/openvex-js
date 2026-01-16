@@ -99,7 +99,7 @@ export function runVexCtlCreate(options: VexCtlCreateOptions): unknown {
   const localVexCtl = join(process.cwd(), ".bin", "vexctl");
 
   if (!existsSync(localVexCtl)) {
-    throw new Error(`vexctl binary not found at ${localVexCtl}. Please run 'npm install' to install it.`);
+    throw new Error(`vexctl binary not found at ${localVexCtl}. Please run 'npm run install-vexctl' to install it.`);
   }
 
   try {
