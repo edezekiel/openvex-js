@@ -3,6 +3,7 @@
  * Based on OpenVEX JSON Schema v0.2.0
  */
 
+import { Temporal } from "@js-temporal/polyfill";
 import * as v from "valibot";
 
 /**
@@ -12,8 +13,12 @@ const dateTimeSchema = v.pipe(
   v.string(),
   v.check((input) => {
     // Accept ISO 8601 dates, including those with nanoseconds
-    const date = new Date(input);
-    return !Number.isNaN(date.getTime());
+    try {
+      Temporal.Instant.from(input);
+      return true;
+    } catch {
+      return false;
+    }
   }, "Invalid date-time format"),
 );
 

@@ -3,6 +3,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { Temporal } from "@js-temporal/polyfill";
 import type { CreateDocumentOptions } from "./create-options.js";
 import type {
   AffectedStatement,
@@ -40,7 +41,7 @@ function generateCanonicalId(doc: Omit<OpenVexDocument, "@id">): string {
  * Get current timestamp in ISO 8601 format
  */
 function getCurrentTimestamp(): string {
-  return new Date().toISOString();
+  return Temporal.Now.instant().toString();
 }
 
 /**
