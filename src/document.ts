@@ -12,7 +12,7 @@ import type {
   OpenVexDocument,
   Statement,
   Vulnerability,
-} from "./types.js";
+} from "./schemas.js";
 
 /**
  * Generate a canonical document ID based on the document content

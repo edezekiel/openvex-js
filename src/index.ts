@@ -25,7 +25,7 @@ export type { CreateDocumentOptions } from "./create-options.js";
 export { createDocument, createProduct, createVulnerability } from "./document.js";
 // Export parse functions
 export { parseOpenVexDocument, parseOpenVexDocumentFromUnknown } from "./parse.js";
-// Export types
+// Export types (derived from schemas)
 export type {
   AffectedStatement,
   Component,
@@ -38,4 +38,4 @@ export type {
   StatementStatus,
   Subcomponent,
   Vulnerability,
-} from "./types.js";
+} from "./schemas.js";

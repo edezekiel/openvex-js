@@ -89,6 +89,17 @@ const vulnerabilitySchema = v.object({
 });
 
 /**
+ * Schema for statement status
+ * Used to derive the StatementStatus type
+ */
+const statementStatusSchema = v.union([
+  v.literal("not_affected"),
+  v.literal("affected"),
+  v.literal("fixed"),
+  v.literal("under_investigation"),
+]);
+
+/**
  * Schema for justification
  */
 const justificationSchema = v.picklist([
@@ -176,3 +187,85 @@ export const openVexDocumentSchema = v.object({
   tooling: v.optional(v.string()),
   statements: v.pipe(v.array(statementSchema), v.minLength(1)),
 });
+
+// ============================================================================
+// Type Exports - Derived from Schemas (Single Source of Truth)
+// ============================================================================
+
+/**
+ * Status values for VEX statements
+ * Derived from statementStatusSchema
+ */
+export type StatementStatus = v.InferOutput<typeof statementStatusSchema>;
+
+/**
+ * Justification values for not_affected status
+ * Derived from justificationSchema
+ */
+export type Justification = v.InferOutput<typeof justificationSchema>;
+
+/**
+ * Hash algorithm types
+ * Derived from hashesSchema keys
+ */
+export type HashAlgorithm = keyof v.InferOutput<typeof hashesSchema>;
+
+/**
+ * Map of hash algorithms to hash values
+ * Derived from hashesSchema
+ */
+export type Hashes = v.InferOutput<typeof hashesSchema>;
+
+/**
+ * Product identifiers (at least one required)
+ * Derived from identifiersSchema
+ */
+export type Identifiers = v.InferOutput<typeof identifiersSchema>;
+
+/**
+ * Subcomponent structure
+ * Derived from subcomponentSchema
+ */
+export type Subcomponent = v.InferOutput<typeof subcomponentSchema>;
+
+/**
+ * Component/Product structure
+ * Derived from componentSchema
+ */
+export type Component = v.InferOutput<typeof componentSchema>;
+
+/**
+ * Vulnerability structure
+ * Derived from vulnerabilitySchema
+ */
+export type Vulnerability = v.InferOutput<typeof vulnerabilitySchema>;
+
+/**
+ * Statement with not_affected status (requires justification or impact_statement)
+ * Derived from notAffectedStatementSchema
+ */
+export type NotAffectedStatement = v.InferOutput<typeof notAffectedStatementSchema>;
+
+/**
+ * Statement with affected status (requires action_statement)
+ * Derived from affectedStatementSchema
+ */
+export type AffectedStatement = v.InferOutput<typeof affectedStatementSchema>;
+
+/**
+ * Statement with fixed or under_investigation status
+ * Derived from fixedOrUnderInvestigationStatementSchema
+ */
+export type FixedOrUnderInvestigationStatement = v.InferOutput<typeof fixedOrUnderInvestigationStatementSchema>;
+
+/**
+ * Union type for all statement types
+ * Derived from statementSchema
+ */
+export type Statement = v.InferOutput<typeof statementSchema>;
+
+/**
+ * OpenVEX document structure
+ * Derived from openVexDocumentSchema
+ */
+export type OpenVexDocument = v.InferOutput<typeof openVexDocumentSchema>;

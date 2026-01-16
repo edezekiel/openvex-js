@@ -4,8 +4,8 @@
  */
 
 import * as v from "valibot";
+import type { OpenVexDocument } from "./schemas.js";
 import { openVexDocumentSchema } from "./schemas.js";
-import type { OpenVexDocument } from "./types.js";
 
 /**
  * Parse an OpenVEX document from a JSON string

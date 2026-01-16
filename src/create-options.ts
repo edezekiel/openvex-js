@@ -3,7 +3,7 @@
  * Compatible with vexctl create command options
  */
 
-import type { Justification, StatementStatus } from "./types.js";
+import type { Justification, StatementStatus } from "./schemas.js";
 
 export interface CreateDocumentOptions {
   product?: string;
