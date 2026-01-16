@@ -10,6 +10,10 @@ import { normalizeDocument, runVexCtlCreate, vexctlOptionsToCreateDocumentOption
 function expectMatchesVexCtl(fixturePath: string): void {
   const fixture = loadFixture(fixturePath);
 
+  if (!fixture.vexctl) {
+    throw new Error(`Fixture ${fixturePath} does not have vexctl options`);
+  }
+
   // Run vexctl to get reference output
   const vexctlOutput = runVexCtlCreate(fixture.vexctl);
   const normalizedVexCtl = normalizeDocument(vexctlOutput);
@@ -21,6 +25,25 @@ function expectMatchesVexCtl(fixturePath: string): void {
 
   // Full equality check of normalized output
   expect(normalizedLibrary).toEqual(normalizedVexCtl);
+}
+
+/**
+ * Helper to test library-only features (not supported by vexctl)
+ * Verifies that the document structure is correct and parses as valid OpenVEX
+ */
+function expectValidLibraryDocument(fixturePath: string): void {
+  const fixture = loadFixture(fixturePath);
+
+  if (!fixture.library) {
+    throw new Error(`Fixture ${fixturePath} does not have library options`);
+  }
+
+  // Create document using library options
+  const doc = createDocument(fixture.library);
+
+  // Verify it parses as valid OpenVEX
+  const parsed = parseOpenVexDocument(JSON.stringify(doc));
+  expect(parsed).toEqual(doc);
 }
 
 describe("createDocument", () => {
@@ -364,6 +387,107 @@ describe("library-only features (not in vexctl)", () => {
         "The vulnerable code path is not compiled in this build",
       );
       expect(notAffectedStmt.products?.[0]?.subcomponents).toHaveLength(1);
+
+      // Verify it parses as valid OpenVEX
+      const parsed = parseOpenVexDocument(JSON.stringify(doc));
+      expect(parsed).toEqual(doc);
+    });
+  });
+
+  describe("hash support", () => {
+    const hashFixtureTests = [
+      { fixture: "create/with-hashes.json", description: "document with product hashes" },
+      {
+        fixture: "create/with-hashes-comprehensive.json",
+        description: "comprehensive document with multiple products, subcomponents, and hashes",
+      },
+    ] as const;
+
+    it.each(hashFixtureTests)("should create valid OpenVEX $description", ({ fixture }) => {
+      expectValidLibraryDocument(fixture);
+    });
+
+    it("should create document with product hashes", () => {
+      const doc = createDocument({
+        author: "Test Author",
+        statements: [
+          {
+            vulnerability: "CVE-2022-39260",
+            status: "fixed",
+            products: [
+              {
+                id: "pkg:apk/wolfi/product@1.23.0-r1?arch=armv7",
+                hashes: {
+                  "sha-256": "402fa523b96591d4450ace90e32d9f779fcfd938903e1c5bf9d3701860b8f856",
+                  "sha-512":
+                    "d2eb65b083923d90cf55111c598f81d3d9c66f4457dfd173f01a6b7306f3b222541be42a35fe47191a9ca00e017533e8c07ca192bd22954e125557c72d2a3178",
+                },
+              },
+            ],
+          },
+        ],
+      });
+
+      const product = doc.statements[0]?.products?.[0];
+      expect(product).toBeDefined();
+      expect(product?.hashes).toBeDefined();
+      expect(product?.hashes?.["sha-256"]).toBe("402fa523b96591d4450ace90e32d9f779fcfd938903e1c5bf9d3701860b8f856");
+      expect(product?.hashes?.["sha-512"]).toBe(
+        "d2eb65b083923d90cf55111c598f81d3d9c66f4457dfd173f01a6b7306f3b222541be42a35fe47191a9ca00e017533e8c07ca192bd22954e125557c72d2a3178",
+      );
+
+      // Verify it parses as valid OpenVEX
+      const parsed = parseOpenVexDocument(JSON.stringify(doc));
+      expect(parsed).toEqual(doc);
+    });
+
+    it("should create document with product hashes and subcomponents that also have hashes", () => {
+      const doc = createDocument({
+        author: "Test Author",
+        statements: [
+          {
+            vulnerability: "CVE-2023-12345",
+            status: "not_affected",
+            justification: "component_not_present",
+            products: [
+              {
+                id: "pkg:apk/wolfi/product@1.23.0-r1?arch=armv7",
+                hashes: {
+                  "sha-256": "402fa523b96591d4450ace90e32d9f779fcfd938903e1c5bf9d3701860b8f856",
+                },
+                subcomponents: [
+                  {
+                    id: "pkg:apk/wolfi/libcurl@7.87.0-r0",
+                    hashes: {
+                      "sha-256": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2",
+                    },
+                  },
+                  "pkg:apk/wolfi/openssl@3.0.7-r0",
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const product = doc.statements[0]?.products?.[0];
+      expect(product).toBeDefined();
+      expect(product?.hashes).toBeDefined();
+      expect(product?.hashes?.["sha-256"]).toBe("402fa523b96591d4450ace90e32d9f779fcfd938903e1c5bf9d3701860b8f856");
+      expect(product?.subcomponents).toHaveLength(2);
+
+      // First subcomponent has hashes
+      const subcomponent1 = product?.subcomponents?.[0];
+      expect(subcomponent1).toBeDefined();
+      expect(subcomponent1?.hashes).toBeDefined();
+      expect(subcomponent1?.hashes?.["sha-256"]).toBe(
+        "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2",
+      );
+
+      // Second subcomponent (string) has no hashes
+      const subcomponent2 = product?.subcomponents?.[1];
+      expect(subcomponent2).toBeDefined();
+      expect(subcomponent2?.hashes).toBeUndefined();
 
       // Verify it parses as valid OpenVEX
       const parsed = parseOpenVexDocument(JSON.stringify(doc));

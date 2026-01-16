@@ -1,11 +1,17 @@
 import { createHash } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
 import * as v from "valibot";
-import type { CreateDocumentOptions, CreateStatementOptions, ProductInput } from "./create-options.js";
+import type {
+  CreateDocumentOptions,
+  CreateStatementOptions,
+  ProductInput,
+  SubcomponentInput,
+} from "./create-options.js";
 import type {
   AffectedStatement,
   Component,
   FixedOrUnderInvestigationStatement,
+  Hashes,
   NotAffectedStatement,
   OpenVexDocument,
   Statement,
@@ -33,22 +39,35 @@ function getCurrentTimestamp(): string {
 }
 
 /**
+ * Create the base structure for a component/subcomponent from an identifier
+ * Only purl, cpe22, and cpe23 are allowed per OpenVEX spec
+ * Returns a structure compatible with both Component and Subcomponent
+ */
+function createComponentBase(identifier: string, hashes?: Hashes): Omit<Component, "subcomponents"> {
+  let base: Omit<Component, "subcomponents">;
+  if (identifier.startsWith("pkg:")) {
+    base = { "@id": identifier };
+  } else if (identifier.startsWith("cpe:2.2:")) {
+    base = { identifiers: { cpe22: identifier } };
+  } else if (identifier.startsWith("cpe:2.3:")) {
+    base = { identifiers: { cpe23: identifier } };
+  } else {
+    throw new Error(
+      `Invalid identifier type: "${identifier}". Only purl (pkg:...), cpe22 (cpe:2.2:...), and cpe23 (cpe:2.3:...) are allowed.`,
+    );
+  }
+  if (hashes) {
+    base.hashes = hashes;
+  }
+  return base;
+}
+
+/**
  * Create a component from a string identifier
  * Only purl, cpe22, and cpe23 are allowed per OpenVEX spec
  */
-function createComponentFromIdentifier(identifier: string): Component {
-  if (identifier.startsWith("pkg:")) {
-    return { "@id": identifier };
-  }
-  if (identifier.startsWith("cpe:2.2:")) {
-    return { identifiers: { cpe22: identifier } };
-  }
-  if (identifier.startsWith("cpe:2.3:")) {
-    return { identifiers: { cpe23: identifier } };
-  }
-  throw new Error(
-    `Invalid identifier type: "${identifier}". Only purl (pkg:...), cpe22 (cpe:2.2:...), and cpe23 (cpe:2.3:...) are allowed.`,
-  );
+function createComponentFromIdentifier(identifier: string, hashes?: Hashes): Component {
+  return createComponentBase(identifier, hashes);
 }
 
 /**
@@ -60,11 +79,14 @@ export function createProduct(identifier: string): Component {
 }
 
 /**
- * Create a subcomponent from a string identifier
+ * Create a subcomponent from a string identifier or SubcomponentInput
  * Only purl, cpe22, and cpe23 are allowed per OpenVEX spec
  */
-export function createSubcomponent(identifier: string): Subcomponent {
-  return createComponentFromIdentifier(identifier);
+export function createSubcomponent(input: SubcomponentInput): Subcomponent {
+  if (typeof input === "string") {
+    return createComponentBase(input);
+  }
+  return createComponentBase(input.id, input.hashes);
 }
 
 export function createVulnerability(name: string, aliases?: string[]): Vulnerability {
@@ -76,14 +98,14 @@ export function createVulnerability(name: string, aliases?: string[]): Vulnerabi
 }
 
 /**
- * Create a component from ProductInput (string or object with subcomponents)
+ * Create a component from ProductInput (string or object with subcomponents and/or hashes)
  */
 function createComponentFromProductInput(input: ProductInput): Component {
   if (typeof input === "string") {
     return createComponentFromIdentifier(input);
   }
 
-  const component = createComponentFromIdentifier(input.id);
+  const component = createComponentFromIdentifier(input.id, input.hashes);
   if (input.subcomponents && input.subcomponents.length > 0) {
     component.subcomponents = input.subcomponents.map(createSubcomponent);
   }
