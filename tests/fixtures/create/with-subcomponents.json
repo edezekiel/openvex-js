@@ -1,0 +1,11 @@
+{
+  "description": "Fixed status with subcomponents",
+  "vexctl": {
+    "product": "pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64",
+    "vulnerability": "CVE-2022-39260",
+    "status": "fixed",
+    "author": "Test Author",
+    "role": "Security Team",
+    "subcomponents": ["pkg:apk/wolfi/libcurl@7.87.0-r0?arch=x86_64", "pkg:apk/wolfi/openssl@3.0.7-r0?arch=x86_64"]
+  }
+}

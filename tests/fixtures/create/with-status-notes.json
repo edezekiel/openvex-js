@@ -1,0 +1,10 @@
+{
+  "description": "Document with status_notes field",
+  "vexctl": {
+    "product": "pkg:apk/wolfi/git@2.39.0-r1",
+    "vulnerability": "CVE-2022-39260",
+    "status": "fixed",
+    "author": "Test Author",
+    "statusNote": "This vulnerability has been patched in the latest release"
+  }
+}

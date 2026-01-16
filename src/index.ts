@@ -14,12 +14,14 @@ export function getVersion(): string {
 }
 
 export type { CreateDocumentOptions } from "./create-options.js";
-export { createDocument, createProduct, createVulnerability } from "./document.js";
+export { createDocument, createProduct, createSubcomponent, createVulnerability } from "./document.js";
 export { OpenVexValidationError, type ValidationIssue } from "./errors.js";
 export { parseOpenVexDocument, parseOpenVexDocumentFromUnknown } from "./parse.js";
 export type {
   AffectedStatement,
   Component,
+  FixedOrUnderInvestigationStatement,
+  HashAlgorithm,
   Hashes,
   Identifiers,
   Justification,

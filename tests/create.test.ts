@@ -35,7 +35,10 @@ describe("createDocument", () => {
       description: "not_affected document with both justification and impact statement",
     },
     { fixture: "create/affected-action-statement.json", description: "affected document with action statement" },
+    { fixture: "create/under-investigation.json", description: "under_investigation status document" },
     { fixture: "create/multiple-products.json", description: "document with multiple products" },
+    { fixture: "create/with-subcomponents.json", description: "document with subcomponents" },
+    { fixture: "create/with-status-notes.json", description: "document with status_notes" },
   ] as const;
 
   it.each(fixtureTests)("should create $description matching vexctl", ({ fixture }) => {
