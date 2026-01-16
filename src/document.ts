@@ -1,7 +1,3 @@
-/**
- * Functions for creating OpenVEX documents
- */
-
 import { createHash } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
 import type { CreateDocumentOptions } from "./create-options.js";
@@ -12,15 +8,15 @@ import type {
   NotAffectedStatement,
   OpenVexDocument,
   Statement,
+  StatementStatus,
   Vulnerability,
 } from "./schemas.js";
 
 /**
  * Generate a canonical document ID based on the document content
- * This mimics vexctl's GenerateCanonicalID behavior
+ * Mimics vexctl's GenerateCanonicalID behavior
  */
 function generateCanonicalId(doc: Omit<OpenVexDocument, "@id">): string {
-  // Create a deterministic representation of the document
   const docStr = JSON.stringify({
     "@context": doc["@context"],
     author: doc.author,
@@ -37,40 +33,29 @@ function generateCanonicalId(doc: Omit<OpenVexDocument, "@id">): string {
   return `https://openvex.dev/docs/public/vex-${hash}`;
 }
 
-/**
- * Get current timestamp in ISO 8601 format
- */
 function getCurrentTimestamp(): string {
   return Temporal.Now.instant().toString();
 }
 
 /**
- * Create a product/component from a string identifier (purl, cpe, etc.)
- * According to the OpenVEX spec, only purl, cpe22, and cpe23 are allowed as identifier types.
+ * Create a product/component from a string identifier
+ * Only purl, cpe22, and cpe23 are allowed per OpenVEX spec
  */
 export function createProduct(identifier: string): Component {
-  // If it looks like a purl, use it as @id (purls can also be used as IRIs)
   if (identifier.startsWith("pkg:")) {
     return { "@id": identifier };
   }
-  // CPE 2.2 format
   if (identifier.startsWith("cpe:2.2:")) {
     return { identifiers: { cpe22: identifier } };
   }
-  // CPE 2.3 format
   if (identifier.startsWith("cpe:2.3:")) {
     return { identifiers: { cpe23: identifier } };
   }
-  // If we can't determine the identifier type, throw an error
-  // Only purl, cpe22, and cpe23 are allowed according to the spec
   throw new Error(
     `Invalid identifier type: "${identifier}". Only purl (pkg:...), cpe22 (cpe:2.2:...), and cpe23 (cpe:2.3:...) are allowed.`,
   );
 }
 
-/**
- * Create a vulnerability from a name and optional aliases
- */
 export function createVulnerability(name: string, aliases?: string[]): Vulnerability {
   const vuln: Vulnerability = { name };
   if (aliases && aliases.length > 0) {
@@ -81,8 +66,10 @@ export function createVulnerability(name: string, aliases?: string[]): Vulnerabi
 
 /**
  * Create a statement from options
+ * @param options - Options for creating the statement
+ * @param timestamp - Timestamp to use for the statement
  */
-function createStatementFromOptions(options: CreateDocumentOptions): Statement {
+function createStatementFromOptions(options: CreateDocumentOptions, timestamp: string): Statement {
   if (!options.vulnerability) {
     throw new Error("vulnerability is required");
   }
@@ -103,17 +90,26 @@ function createStatementFromOptions(options: CreateDocumentOptions): Statement {
     throw new Error("at least one product is required");
   }
 
-  const timestamp = getCurrentTimestamp();
   const vulnerability = createVulnerability(options.vulnerability, options.aliases);
 
-  const baseStatement = {
+  const baseStatement: {
+    vulnerability: Vulnerability;
+    products: Component[];
+    status: StatementStatus;
+    timestamp: string;
+    supplier?: string;
+    status_notes?: string;
+  } = {
     vulnerability,
     products,
     status: options.status,
     timestamp,
-    supplier: undefined,
     status_notes: options.statusNote,
   };
+
+  if (options.supplier !== undefined) {
+    baseStatement.supplier = options.supplier;
+  }
 
   if (options.status === "not_affected") {
     if (!options.justification && !options.impactStatement) {
@@ -145,9 +141,6 @@ function createStatementFromOptions(options: CreateDocumentOptions): Statement {
     return stmt;
   }
 
-  // fixed or under_investigation
-  // At this point, TypeScript knows status is "fixed" | "under_investigation"
-  // because we've already handled "not_affected" and "affected"
   const stmt: FixedOrUnderInvestigationStatement = {
     ...baseStatement,
     status: options.status,
@@ -156,15 +149,16 @@ function createStatementFromOptions(options: CreateDocumentOptions): Statement {
 }
 
 /**
- * Create an OpenVEX document from options (similar to vexctl create)
+ * Create an OpenVEX document from options
+ * Uses a single timestamp for both document and statement
  */
 export function createDocument(options: CreateDocumentOptions): OpenVexDocument {
   if (!options.author) {
     throw new Error("author is required");
   }
 
-  const statement = createStatementFromOptions(options);
   const timestamp = getCurrentTimestamp();
+  const statement = createStatementFromOptions(options, timestamp);
 
   const doc: Omit<OpenVexDocument, "@id"> = {
     "@context": "https://openvex.dev/ns/v0.2.0",
@@ -175,7 +169,6 @@ export function createDocument(options: CreateDocumentOptions): OpenVexDocument 
     statements: [statement],
   };
 
-  // Generate ID if not provided
   const id = options.id || generateCanonicalId(doc);
 
   return {

@@ -1,8 +1,3 @@
-/**
- * Options for creating OpenVEX documents
- * Compatible with vexctl create command options
- */
-
 import type { Justification, StatementStatus } from "./schemas.js";
 
 export interface CreateDocumentOptions {
@@ -19,4 +14,5 @@ export interface CreateDocumentOptions {
   subcomponents?: string[];
   aliases?: string[];
   id?: string;
+  supplier?: string;
 }
