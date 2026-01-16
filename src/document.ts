@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
-import type { CreateDocumentOptions } from "./create-options.js";
+import * as v from "valibot";
+import type { CreateDocumentOptions, CreateStatementOptions, ProductInput } from "./create-options.js";
 import type {
   AffectedStatement,
   Component,
@@ -12,23 +13,16 @@ import type {
   Subcomponent,
   Vulnerability,
 } from "./schemas.js";
+import { statementSchema } from "./schemas.js";
 
 /**
  * Generate a canonical document ID based on the document content
  * Mimics vexctl's GenerateCanonicalID behavior
  */
 function generateCanonicalId(doc: Omit<OpenVexDocument, "@id">): string {
-  const docStr = JSON.stringify({
-    "@context": doc["@context"],
-    author: doc.author,
-    role: doc.role,
-    version: doc.version,
-    statements: doc.statements.map((stmt) => ({
-      vulnerability: stmt.vulnerability.name,
-      products: stmt.products?.map((p) => p["@id"] || JSON.stringify(p.identifiers)),
-      status: stmt.status,
-    })),
-  });
+  // Exclude dynamic fields that shouldn't affect the canonical ID
+  const { timestamp, last_updated, ...canonicalDoc } = doc;
+  const docStr = JSON.stringify(canonicalDoc);
 
   const hash = createHash("sha256").update(docStr).digest("hex");
   return `https://openvex.dev/docs/public/vex-${hash}`;
@@ -39,10 +33,10 @@ function getCurrentTimestamp(): string {
 }
 
 /**
- * Create a product/component from a string identifier
+ * Create a component from a string identifier
  * Only purl, cpe22, and cpe23 are allowed per OpenVEX spec
  */
-export function createProduct(identifier: string): Component {
+function createComponentFromIdentifier(identifier: string): Component {
   if (identifier.startsWith("pkg:")) {
     return { "@id": identifier };
   }
@@ -58,22 +52,19 @@ export function createProduct(identifier: string): Component {
 }
 
 /**
+ * Create a product/component from a string identifier
+ * Only purl, cpe22, and cpe23 are allowed per OpenVEX spec
+ */
+export function createProduct(identifier: string): Component {
+  return createComponentFromIdentifier(identifier);
+}
+
+/**
  * Create a subcomponent from a string identifier
  * Only purl, cpe22, and cpe23 are allowed per OpenVEX spec
  */
 export function createSubcomponent(identifier: string): Subcomponent {
-  if (identifier.startsWith("pkg:")) {
-    return { "@id": identifier };
-  }
-  if (identifier.startsWith("cpe:2.2:")) {
-    return { identifiers: { cpe22: identifier } };
-  }
-  if (identifier.startsWith("cpe:2.3:")) {
-    return { identifiers: { cpe23: identifier } };
-  }
-  throw new Error(
-    `Invalid subcomponent identifier type: "${identifier}". Only purl (pkg:...), cpe22 (cpe:2.2:...), and cpe23 (cpe:2.3:...) are allowed.`,
-  );
+  return createComponentFromIdentifier(identifier);
 }
 
 export function createVulnerability(name: string, aliases?: string[]): Vulnerability {
@@ -85,28 +76,36 @@ export function createVulnerability(name: string, aliases?: string[]): Vulnerabi
 }
 
 /**
- * Create a statement from options
- * @param options - Options for creating the statement
- * @param timestamp - Timestamp to use for the statement
+ * Create a component from ProductInput (string or object with subcomponents)
  */
-function createStatementFromOptions(options: CreateDocumentOptions, timestamp: string): Statement {
-  const products: Component[] = [];
-  if (options.product) {
-    products.push(createProduct(options.product));
-  }
-  if (options.products) {
-    products.push(...options.products.map(createProduct));
+function createComponentFromProductInput(input: ProductInput): Component {
+  if (typeof input === "string") {
+    return createComponentFromIdentifier(input);
   }
 
-  if (products.length === 0) {
+  const component = createComponentFromIdentifier(input.id);
+  if (input.subcomponents && input.subcomponents.length > 0) {
+    component.subcomponents = input.subcomponents.map(createSubcomponent);
+  }
+  return component;
+}
+
+/**
+ * Check if an object is a pre-built Statement by validating against the schema
+ */
+function isStatement(obj: Statement | CreateStatementOptions): obj is Statement {
+  return v.is(statementSchema, obj);
+}
+
+/**
+ * Create a statement from CreateStatementOptions
+ */
+function createStatementFromOptions(options: CreateStatementOptions, timestamp: string): Statement {
+  if (options.products.length === 0) {
     throw new Error("at least one product is required");
   }
 
-  // Add subcomponents to the first product (following vexctl behavior)
-  if (options.subcomponents && options.subcomponents.length > 0 && products[0]) {
-    products[0].subcomponents = options.subcomponents.map(createSubcomponent);
-  }
-
+  const products = options.products.map(createComponentFromProductInput);
   const vulnerability = createVulnerability(options.vulnerability, options.aliases);
 
   const baseStatement: {
@@ -169,31 +168,47 @@ function createStatementFromOptions(options: CreateDocumentOptions, timestamp: s
 }
 
 /**
- * Create an OpenVEX document from options
- * Uses a single timestamp for both document and statement
+ * Create a single VEX statement
+ * @param options - Statement options
+ * @param timestamp - Optional timestamp (auto-generated if not provided)
+ */
+export function createStatement(options: CreateStatementOptions, timestamp?: string): Statement {
+  return createStatementFromOptions(options, timestamp ?? getCurrentTimestamp());
+}
+
+/**
+ * Create an OpenVEX document with one or more statements
  */
 export function createDocument(options: CreateDocumentOptions): OpenVexDocument {
-  const timestamp = getCurrentTimestamp();
-  const statement = createStatementFromOptions(options, timestamp);
+  if (options.statements.length === 0) {
+    throw new Error("at least one statement is required");
+  }
 
-  const id =
-    options.id ||
-    generateCanonicalId({
-      "@context": "https://openvex.dev/ns/v0.2.0",
-      author: options.author,
-      role: options.role,
-      timestamp,
-      version: 1,
-      statements: [statement],
-    });
+  const timestamp = getCurrentTimestamp();
+
+  const statements = options.statements.map((stmtOrOptions) => {
+    if (isStatement(stmtOrOptions)) {
+      return stmtOrOptions;
+    }
+    return createStatementFromOptions(stmtOrOptions, timestamp);
+  });
+
+  const docWithoutId: Omit<OpenVexDocument, "@id"> = {
+    "@context": "https://openvex.dev/ns/v0.2.0",
+    author: options.author,
+    timestamp,
+    version: 1,
+    statements,
+  };
+
+  if (options.role !== undefined) {
+    docWithoutId.role = options.role;
+  }
+
+  const id = options.id || generateCanonicalId(docWithoutId);
 
   return {
-    "@context": "https://openvex.dev/ns/v0.2.0",
+    ...docWithoutId,
     "@id": id,
-    author: options.author,
-    role: options.role,
-    version: 1,
-    statements: [statement],
-    timestamp,
   };
 }

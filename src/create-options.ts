@@ -1,18 +1,23 @@
-import type { Justification, StatementStatus } from "./schemas.js";
+import type { Justification, Statement, StatementStatus } from "./schemas.js";
 
-export interface CreateDocumentOptions {
-  /** Document author (required) */
-  author: string;
-  /** Vulnerability identifier, e.g. CVE-2023-12345 (required) */
+/**
+ * Flexible product specification - can be a simple string identifier
+ * or an object with per-product subcomponents
+ */
+export type ProductInput = string | { id: string; subcomponents?: string[] };
+
+/**
+ * Options for creating a VEX statement (statement-level concerns)
+ */
+export interface CreateStatementOptions {
+  /** Vulnerability identifier, e.g. CVE-2023-12345 */
   vulnerability: string;
-  /** Statement status (required) */
+  /** Statement status */
   status: StatementStatus;
-  /** Single product identifier (purl, cpe22, or cpe23). Either product or products must be provided. */
-  product?: string;
-  /** Multiple product identifiers. Either product or products must be provided. */
-  products?: string[];
-  /** Author's role */
-  role?: string;
+  /** Product identifiers - each can have its own subcomponents */
+  products: ProductInput[];
+  /** Vulnerability aliases */
+  aliases?: string[];
   /** Justification for not_affected status */
   justification?: Justification;
   /** Action statement for affected status */
@@ -21,12 +26,20 @@ export interface CreateDocumentOptions {
   impactStatement?: string;
   /** Additional status notes */
   statusNote?: string;
-  /** Vulnerability aliases */
-  aliases?: string[];
-  /** Custom document ID (auto-generated if not provided) */
-  id?: string;
   /** Supplier information */
   supplier?: string;
-  /** Subcomponent identifiers (attached to the first product) */
-  subcomponents?: string[];
+}
+
+/**
+ * Options for creating a VEX document (document-level concerns)
+ */
+export interface CreateDocumentOptions {
+  /** Document author */
+  author: string;
+  /** Author's role */
+  role?: string;
+  /** Custom document ID (auto-generated if not provided) */
+  id?: string;
+  /** Statements - can be CreateStatementOptions or pre-built Statement objects */
+  statements: (Statement | CreateStatementOptions)[];
 }

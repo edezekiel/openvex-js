@@ -41,7 +41,7 @@
     "security",
     "sbom"
   ],
-  "author": "",
+  "author": "Edward Ezekiel <ed.a.ezekiel@gmail.com>",
   "license": "MIT",
   "engines": {
     "node": ">=23.6.0"
