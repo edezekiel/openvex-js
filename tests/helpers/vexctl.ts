@@ -5,22 +5,9 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import type { CreateDocumentOptions } from "../../src/create-options.js";
 
-export interface VexCtlCreateOptions {
-  product?: string;
-  products?: string[];
-  vulnerability?: string;
-  status?: string;
-  author?: string;
-  role?: string;
-  justification?: string;
-  actionStatement?: string;
-  impactStatement?: string;
-  statusNote?: string;
-  subcomponents?: string[];
-  aliases?: string[];
-  id?: string;
-}
+export type VexCtlCreateOptions = CreateDocumentOptions;
 
 /**
  * Execute `vexctl create` with the given options and return the JSON output

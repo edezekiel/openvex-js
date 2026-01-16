@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { parseOpenVexDocument } from "../src/index.js";
 import { runVexCtlCreate, type VexCtlCreateOptions } from "./helpers/vexctl.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,62 +20,47 @@ function loadFixture(path: string): { description: string; vexctl: VexCtlCreateO
 describe("parseOpenVexDocument", () => {
   it("should parse basic fixed status document", () => {
     const fixture = loadFixture("create/basic-fixed.json");
-    const _vexctlDoc = runVexCtlCreate(fixture.vexctl);
+    const vexctlDoc = runVexCtlCreate(fixture.vexctl);
 
-    // TODO: Implement parseOpenVexDocument function
-    // const doc = parseOpenVexDocument(JSON.stringify(_vexctlDoc));
-    // expect(doc["@context"]).toBe("https://openvex.dev/ns/v0.2.0");
-    // expect(doc.statements).toHaveLength(1);
-    // expect(doc.statements[0].status).toBe("fixed");
-
-    // Placeholder test that will fail
-    expect(true).toBe(false);
+    const doc = parseOpenVexDocument(JSON.stringify(vexctlDoc));
+    expect(doc["@context"]).toBe("https://openvex.dev/ns/v0.2.0");
+    expect(doc.statements).toHaveLength(1);
+    expect(doc.statements[0]?.status).toBe("fixed");
   });
 
   it("should parse document with multiple products", () => {
     const fixture = loadFixture("create/multiple-products.json");
-    const _vexctlDoc = runVexCtlCreate(fixture.vexctl);
+    const vexctlDoc = runVexCtlCreate(fixture.vexctl);
 
-    // TODO: Implement parseOpenVexDocument function
-    // const doc = parseOpenVexDocument(JSON.stringify(_vexctlDoc));
-    // expect(doc.statements[0].products).toHaveLength(2);
-
-    expect(true).toBe(false);
+    const doc = parseOpenVexDocument(JSON.stringify(vexctlDoc));
+    expect(doc.statements[0]?.products).toHaveLength(2);
   });
 
   it("should parse not_affected document with justification", () => {
     const fixture = loadFixture("create/not-affected-justification.json");
-    const _vexctlDoc = runVexCtlCreate(fixture.vexctl);
+    const vexctlDoc = runVexCtlCreate(fixture.vexctl);
 
-    // TODO: Implement parseOpenVexDocument function
-    // const doc = parseOpenVexDocument(JSON.stringify(_vexctlDoc));
-    // expect(doc.statements[0].status).toBe("not_affected");
-    // expect(doc.statements[0].justification).toBe("component_not_present");
-
-    expect(true).toBe(false);
+    const doc = parseOpenVexDocument(JSON.stringify(vexctlDoc));
+    expect(doc.statements[0]?.status).toBe("not_affected");
+    const stmt = doc.statements[0] as { justification?: string };
+    expect(stmt.justification).toBe("component_not_present");
   });
 
   it("should parse affected document with action statement", () => {
     const fixture = loadFixture("create/affected-action-statement.json");
-    const _vexctlDoc = runVexCtlCreate(fixture.vexctl);
+    const vexctlDoc = runVexCtlCreate(fixture.vexctl);
 
-    // TODO: Implement parseOpenVexDocument function
-    // const doc = parseOpenVexDocument(JSON.stringify(_vexctlDoc));
-    // expect(doc.statements[0].status).toBe("affected");
-    // expect(doc.statements[0].action_statement).toBeDefined();
-
-    expect(true).toBe(false);
+    const doc = parseOpenVexDocument(JSON.stringify(vexctlDoc));
+    expect(doc.statements[0]?.status).toBe("affected");
+    const stmt = doc.statements[0] as { action_statement?: string };
+    expect(stmt.action_statement).toBeDefined();
   });
 
   it("should throw error for invalid JSON", () => {
-    // TODO: Implement parseOpenVexDocument function
-    // expect(() => parseOpenVexDocument("invalid json")).toThrow();
-    expect(true).toBe(false);
+    expect(() => parseOpenVexDocument("invalid json")).toThrow();
   });
 
   it("should throw error for missing required fields", () => {
-    // TODO: Implement parseOpenVexDocument function
-    // expect(() => parseOpenVexDocument('{"@context": "https://openvex.dev/ns/v0.2.0"}')).toThrow();
-    expect(true).toBe(false);
+    expect(() => parseOpenVexDocument('{"@context": "https://openvex.dev/ns/v0.2.0"}')).toThrow();
   });
 });
