@@ -1,5 +1,5 @@
 // OpenVEX TypeScript Library
-// Main entry point - exports will be added as implementation progresses
+// Main entry point
 
 /**
  * Get the OpenVEX context URL for a given version.
@@ -17,3 +17,25 @@ export function getOpenVexContext(version = "v0.2.0"): string {
 export function getVersion(): string {
   return "0.0.0";
 }
+
+// Export create options type
+export type { CreateDocumentOptions } from "./create-options.js";
+
+// Export create functions
+export { createDocument, createProduct, createVulnerability } from "./document.js";
+// Export parse functions
+export { parseOpenVexDocument, parseOpenVexDocumentFromUnknown } from "./parse.js";
+// Export types (derived from schemas)
+export type {
+  AffectedStatement,
+  Component,
+  Hashes,
+  Identifiers,
+  Justification,
+  NotAffectedStatement,
+  OpenVexDocument,
+  Statement,
+  StatementStatus,
+  Subcomponent,
+  Vulnerability,
+} from "./schemas.js";

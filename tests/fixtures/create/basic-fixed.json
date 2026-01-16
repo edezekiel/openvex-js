@@ -1,0 +1,10 @@
+{
+  "description": "Basic fixed status statement with single product",
+  "vexctl": {
+    "product": "pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64",
+    "vulnerability": "CVE-2022-39260",
+    "status": "fixed",
+    "author": "Test Author",
+    "role": "Security Team"
+  }
+}

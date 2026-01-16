@@ -24,6 +24,7 @@ OpenVEX is a TypeScript library implementing the OpenVEX specification for creat
 3. **Biome defaults** - 2-space indentation, double quotes, trailing commas
 4. **Valibot for validation** - Use Valibot schemas for runtime validation alongside TypeScript types
 5. **Build-free dev** - Development workflow uses TypeScript directly (no build step); tsdown only for distribution builds
+6. **No JS Date object** - Never use `new Date()` or the `Date` object; use `@js-temporal/polyfill` with `Temporal.Now.instant().toString()` for timestamps
 
 ### Testing
 

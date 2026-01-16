@@ -1,0 +1,9 @@
+{
+  "description": "Statement with multiple products",
+  "vexctl": {
+    "products": ["pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64", "pkg:apk/wolfi/git@2.39.0-r1?arch=armv7"],
+    "vulnerability": "CVE-2023-12345",
+    "status": "fixed",
+    "author": "Test Author"
+  }
+}
