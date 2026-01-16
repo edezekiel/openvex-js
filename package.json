@@ -41,10 +41,10 @@
     "security",
     "sbom"
   ],
-  "author": "",
+  "author": "Edward Ezekiel <ed.a.ezekiel@gmail.com>",
   "license": "MIT",
   "engines": {
-    "node": ">=24.12.0"
+    "node": ">=23.6.0"
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.5.1",

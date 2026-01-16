@@ -6,7 +6,7 @@ TypeScript implementation of the OpenVEX specification for creating, validating,
 
 ### Prerequisites
 
-- Node.js >= 24.12.0
+- Node.js >= 23.6.0 (for development - enables TypeScript type stripping without flags)
 - `vexctl` (installed via `npm run install-vexctl`)
 
 ### Setup

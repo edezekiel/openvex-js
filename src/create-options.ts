@@ -1,22 +1,45 @@
+import type { Justification, Statement, StatementStatus } from "./schemas.js";
+
 /**
- * Options for creating OpenVEX documents
- * Compatible with vexctl create command options
+ * Flexible product specification - can be a simple string identifier
+ * or an object with per-product subcomponents
  */
+export type ProductInput = string | { id: string; subcomponents?: string[] };
 
-import type { Justification, StatementStatus } from "./schemas.js";
-
-export interface CreateDocumentOptions {
-  product?: string;
-  products?: string[];
-  vulnerability?: string;
-  status?: StatementStatus;
-  author?: string;
-  role?: string;
-  justification?: Justification;
-  actionStatement?: string;
-  impactStatement?: string;
-  statusNote?: string;
-  subcomponents?: string[];
+/**
+ * Options for creating a VEX statement (statement-level concerns)
+ */
+export interface CreateStatementOptions {
+  /** Vulnerability identifier, e.g. CVE-2023-12345 */
+  vulnerability: string;
+  /** Statement status */
+  status: StatementStatus;
+  /** Product identifiers - each can have its own subcomponents */
+  products: ProductInput[];
+  /** Vulnerability aliases */
   aliases?: string[];
+  /** Justification for not_affected status */
+  justification?: Justification;
+  /** Action statement for affected status */
+  actionStatement?: string;
+  /** Impact statement for not_affected status */
+  impactStatement?: string;
+  /** Additional status notes */
+  statusNote?: string;
+  /** Supplier information */
+  supplier?: string;
+}
+
+/**
+ * Options for creating a VEX document (document-level concerns)
+ */
+export interface CreateDocumentOptions {
+  /** Document author */
+  author: string;
+  /** Author's role */
+  role?: string;
+  /** Custom document ID (auto-generated if not provided) */
   id?: string;
+  /** Statements - can be CreateStatementOptions or pre-built Statement objects */
+  statements: (Statement | CreateStatementOptions)[];
 }

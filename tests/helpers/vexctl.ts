@@ -5,9 +5,89 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { CreateDocumentOptions } from "../../src/create-options.js";
+import type { CreateDocumentOptions, ProductInput } from "../../src/create-options.js";
+import type { Justification, StatementStatus } from "../../src/schemas.js";
 
-export type VexCtlCreateOptions = CreateDocumentOptions;
+/**
+ * Options for vexctl create command (single-statement format)
+ * This matches the vexctl CLI interface, not our library's new API
+ */
+export interface VexCtlOptions {
+  /** Single product identifier */
+  product?: string;
+  /** Multiple product identifiers */
+  products?: string[];
+  /** Vulnerability identifier */
+  vulnerability: string;
+  /** Statement status */
+  status: StatementStatus;
+  /** Document author */
+  author: string;
+  /** Author's role */
+  role?: string;
+  /** Custom document ID */
+  id?: string;
+  /** Subcomponents (vexctl applies to all products) */
+  subcomponents?: string[];
+  /** Vulnerability aliases */
+  aliases?: string[];
+  /** Justification for not_affected status */
+  justification?: Justification;
+  /** Action statement for affected status */
+  actionStatement?: string;
+  /** Impact statement for not_affected status */
+  impactStatement?: string;
+  /** Additional status notes */
+  statusNote?: string;
+  /** Supplier information */
+  supplier?: string;
+}
+
+/**
+ * Convert VexCtlOptions to the new CreateDocumentOptions format
+ */
+export function vexctlOptionsToCreateDocumentOptions(options: VexCtlOptions): CreateDocumentOptions {
+  // Handle product/products - vexctl uses singular 'product' or plural 'products'
+  let productInputs: ProductInput[];
+
+  if (options.products && options.products.length > 0) {
+    // Multiple products
+    productInputs = options.products;
+  } else if (options.product) {
+    // Single product
+    productInputs = [options.product];
+  } else {
+    productInputs = [];
+  }
+
+  // If subcomponents are specified and there's exactly one product, attach them
+  // (vexctl only allows subcomponents with single product)
+  if (options.subcomponents && options.subcomponents.length > 0 && productInputs.length === 1) {
+    const productId = productInputs[0];
+    if (typeof productId === "string") {
+      productInputs = [{ id: productId, subcomponents: options.subcomponents }];
+    }
+  }
+
+  return {
+    author: options.author,
+    role: options.role,
+    id: options.id,
+    statements: [
+      {
+        vulnerability: options.vulnerability,
+        status: options.status,
+        products: productInputs,
+        aliases: options.aliases,
+        justification: options.justification,
+        actionStatement: options.actionStatement,
+        impactStatement: options.impactStatement,
+        statusNote: options.statusNote,
+        supplier: options.supplier,
+      },
+    ],
+  };
+}
 
 /**
  * Execute `vexctl create` with the given options and return the JSON output
@@ -15,41 +95,33 @@ export type VexCtlCreateOptions = CreateDocumentOptions;
  * vexctl accepts positional arguments: [product_id [vuln_id [status]]]
  * For multiple products, use --product flags
  */
-export function runVexCtlCreate(options: VexCtlCreateOptions): unknown {
+export function runVexCtlCreate(options: VexCtlOptions): unknown {
   const args: string[] = [];
 
-  // Handle positional arguments: product, vulnerability, status
-  // If single product, use positional arg; if multiple, use --product flags
-  if (options.products && options.products.length > 1) {
+  // Normalize products
+  const products = options.products ?? (options.product ? [options.product] : []);
+
+  // Handle products - if multiple, use --product flags; if single, use positional
+  if (products.length > 1) {
     // Multiple products: use --product flags
-    for (const product of options.products) {
+    for (const product of products) {
       args.push("--product", product);
     }
     // Vulnerability and status must be flags when using multiple products
-    if (options.vulnerability) {
-      args.push("--vuln", options.vulnerability);
-    }
-    if (options.status) {
-      args.push("--status", options.status);
-    }
+    args.push("--vuln", options.vulnerability);
+    args.push("--status", options.status);
   } else {
     // Single product: use positional arguments
-    const product = options.product || options.products?.[0];
+    const product = products[0];
     if (product) {
       args.push(product);
     }
-    if (options.vulnerability) {
-      args.push(options.vulnerability);
-    }
-    if (options.status) {
-      args.push(options.status);
-    }
+    args.push(options.vulnerability);
+    args.push(options.status);
   }
 
   // Add author
-  if (options.author) {
-    args.push("--author", options.author);
-  }
+  args.push("--author", options.author);
 
   // Add role
   if (options.role) {

@@ -1,10 +1,7 @@
-/**
- * Functions for creating OpenVEX documents
- */
-
 import { createHash } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
-import type { CreateDocumentOptions } from "./create-options.js";
+import * as v from "valibot";
+import type { CreateDocumentOptions, CreateStatementOptions, ProductInput } from "./create-options.js";
 import type {
   AffectedStatement,
   Component,
@@ -12,65 +9,64 @@ import type {
   NotAffectedStatement,
   OpenVexDocument,
   Statement,
+  StatementStatus,
+  Subcomponent,
   Vulnerability,
 } from "./schemas.js";
+import { statementSchema } from "./schemas.js";
 
 /**
  * Generate a canonical document ID based on the document content
- * This mimics vexctl's GenerateCanonicalID behavior
+ * Mimics vexctl's GenerateCanonicalID behavior
  */
 function generateCanonicalId(doc: Omit<OpenVexDocument, "@id">): string {
-  // Create a deterministic representation of the document
-  const docStr = JSON.stringify({
-    "@context": doc["@context"],
-    author: doc.author,
-    role: doc.role,
-    version: doc.version,
-    statements: doc.statements.map((stmt) => ({
-      vulnerability: stmt.vulnerability.name,
-      products: stmt.products?.map((p) => p["@id"] || JSON.stringify(p.identifiers)),
-      status: stmt.status,
-    })),
-  });
+  // Exclude dynamic fields that shouldn't affect the canonical ID
+  const { timestamp, last_updated, ...canonicalDoc } = doc;
+  const docStr = JSON.stringify(canonicalDoc);
 
   const hash = createHash("sha256").update(docStr).digest("hex");
   return `https://openvex.dev/docs/public/vex-${hash}`;
 }
 
-/**
- * Get current timestamp in ISO 8601 format
- */
 function getCurrentTimestamp(): string {
   return Temporal.Now.instant().toString();
 }
 
 /**
- * Create a product/component from a string identifier (purl, cpe, etc.)
- * According to the OpenVEX spec, only purl, cpe22, and cpe23 are allowed as identifier types.
+ * Create a component from a string identifier
+ * Only purl, cpe22, and cpe23 are allowed per OpenVEX spec
  */
-export function createProduct(identifier: string): Component {
-  // If it looks like a purl, use it as @id (purls can also be used as IRIs)
+function createComponentFromIdentifier(identifier: string): Component {
   if (identifier.startsWith("pkg:")) {
     return { "@id": identifier };
   }
-  // CPE 2.2 format
   if (identifier.startsWith("cpe:2.2:")) {
     return { identifiers: { cpe22: identifier } };
   }
-  // CPE 2.3 format
   if (identifier.startsWith("cpe:2.3:")) {
     return { identifiers: { cpe23: identifier } };
   }
-  // If we can't determine the identifier type, throw an error
-  // Only purl, cpe22, and cpe23 are allowed according to the spec
   throw new Error(
     `Invalid identifier type: "${identifier}". Only purl (pkg:...), cpe22 (cpe:2.2:...), and cpe23 (cpe:2.3:...) are allowed.`,
   );
 }
 
 /**
- * Create a vulnerability from a name and optional aliases
+ * Create a product/component from a string identifier
+ * Only purl, cpe22, and cpe23 are allowed per OpenVEX spec
  */
+export function createProduct(identifier: string): Component {
+  return createComponentFromIdentifier(identifier);
+}
+
+/**
+ * Create a subcomponent from a string identifier
+ * Only purl, cpe22, and cpe23 are allowed per OpenVEX spec
+ */
+export function createSubcomponent(identifier: string): Subcomponent {
+  return createComponentFromIdentifier(identifier);
+}
+
 export function createVulnerability(name: string, aliases?: string[]): Vulnerability {
   const vuln: Vulnerability = { name };
   if (aliases && aliases.length > 0) {
@@ -80,40 +76,59 @@ export function createVulnerability(name: string, aliases?: string[]): Vulnerabi
 }
 
 /**
- * Create a statement from options
+ * Create a component from ProductInput (string or object with subcomponents)
  */
-function createStatementFromOptions(options: CreateDocumentOptions): Statement {
-  if (!options.vulnerability) {
-    throw new Error("vulnerability is required");
+function createComponentFromProductInput(input: ProductInput): Component {
+  if (typeof input === "string") {
+    return createComponentFromIdentifier(input);
   }
 
-  if (!options.status) {
-    throw new Error("status is required");
+  const component = createComponentFromIdentifier(input.id);
+  if (input.subcomponents && input.subcomponents.length > 0) {
+    component.subcomponents = input.subcomponents.map(createSubcomponent);
   }
+  return component;
+}
 
-  const products: Component[] = [];
-  if (options.product) {
-    products.push(createProduct(options.product));
-  }
-  if (options.products) {
-    products.push(...options.products.map(createProduct));
-  }
+/**
+ * Check if an object is a pre-built Statement by validating against the schema
+ */
+function isStatement(obj: Statement | CreateStatementOptions): obj is Statement {
+  return v.is(statementSchema, obj);
+}
 
-  if (products.length === 0) {
+/**
+ * Create a statement from CreateStatementOptions
+ */
+function createStatementFromOptions(options: CreateStatementOptions, timestamp: string): Statement {
+  if (options.products.length === 0) {
     throw new Error("at least one product is required");
   }
 
-  const timestamp = getCurrentTimestamp();
+  const products = options.products.map(createComponentFromProductInput);
   const vulnerability = createVulnerability(options.vulnerability, options.aliases);
 
-  const baseStatement = {
+  const baseStatement: {
+    vulnerability: Vulnerability;
+    products: Component[];
+    status: StatementStatus;
+    timestamp: string;
+    supplier?: string;
+    status_notes?: string;
+  } = {
     vulnerability,
     products,
     status: options.status,
     timestamp,
-    supplier: undefined,
-    status_notes: options.statusNote,
   };
+
+  if (options.supplier !== undefined) {
+    baseStatement.supplier = options.supplier;
+  }
+
+  if (options.statusNote !== undefined) {
+    baseStatement.status_notes = options.statusNote;
+  }
 
   if (options.status === "not_affected") {
     if (!options.justification && !options.impactStatement) {
@@ -145,9 +160,6 @@ function createStatementFromOptions(options: CreateDocumentOptions): Statement {
     return stmt;
   }
 
-  // fixed or under_investigation
-  // At this point, TypeScript knows status is "fixed" | "under_investigation"
-  // because we've already handled "not_affected" and "affected"
   const stmt: FixedOrUnderInvestigationStatement = {
     ...baseStatement,
     status: options.status,
@@ -156,30 +168,47 @@ function createStatementFromOptions(options: CreateDocumentOptions): Statement {
 }
 
 /**
- * Create an OpenVEX document from options (similar to vexctl create)
+ * Create a single VEX statement
+ * @param options - Statement options
+ * @param timestamp - Optional timestamp (auto-generated if not provided)
+ */
+export function createStatement(options: CreateStatementOptions, timestamp?: string): Statement {
+  return createStatementFromOptions(options, timestamp ?? getCurrentTimestamp());
+}
+
+/**
+ * Create an OpenVEX document with one or more statements
  */
 export function createDocument(options: CreateDocumentOptions): OpenVexDocument {
-  if (!options.author) {
-    throw new Error("author is required");
+  if (options.statements.length === 0) {
+    throw new Error("at least one statement is required");
   }
 
-  const statement = createStatementFromOptions(options);
   const timestamp = getCurrentTimestamp();
 
-  const doc: Omit<OpenVexDocument, "@id"> = {
+  const statements = options.statements.map((stmtOrOptions) => {
+    if (isStatement(stmtOrOptions)) {
+      return stmtOrOptions;
+    }
+    return createStatementFromOptions(stmtOrOptions, timestamp);
+  });
+
+  const docWithoutId: Omit<OpenVexDocument, "@id"> = {
     "@context": "https://openvex.dev/ns/v0.2.0",
     author: options.author,
-    role: options.role,
     timestamp,
     version: 1,
-    statements: [statement],
+    statements,
   };
 
-  // Generate ID if not provided
-  const id = options.id || generateCanonicalId(doc);
+  if (options.role !== undefined) {
+    docWithoutId.role = options.role;
+  }
+
+  const id = options.id || generateCanonicalId(docWithoutId);
 
   return {
-    ...doc,
+    ...docWithoutId,
     "@id": id,
   };
 }

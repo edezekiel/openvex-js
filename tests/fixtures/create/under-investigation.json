@@ -1,0 +1,10 @@
+{
+  "description": "Under investigation status statement with single product",
+  "vexctl": {
+    "product": "pkg:apk/wolfi/openssl@3.0.7-r0?arch=x86_64",
+    "vulnerability": "CVE-2023-99999",
+    "status": "under_investigation",
+    "author": "Test Author",
+    "role": "Security Team"
+  }
+}
