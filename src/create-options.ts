@@ -1,10 +1,22 @@
-import type { Justification, Statement, StatementStatus } from "./schemas.js";
+import type { Hashes, Justification, Statement, StatementStatus } from "./schemas.js";
+
+/**
+ * Flexible subcomponent specification - can be a simple string identifier
+ * or an object with identifier and optional hashes
+ */
+export type SubcomponentInput = string | { id: string; hashes?: Hashes };
 
 /**
  * Flexible product specification - can be a simple string identifier
- * or an object with per-product subcomponents
+ * or an object with per-product subcomponents and/or hashes
  */
-export type ProductInput = string | { id: string; subcomponents?: string[] };
+export type ProductInput =
+  | string
+  | {
+      id: string;
+      subcomponents?: SubcomponentInput[];
+      hashes?: Hashes;
+    };
 
 /**
  * Options for creating a VEX statement (statement-level concerns)

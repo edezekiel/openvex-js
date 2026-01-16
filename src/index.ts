@@ -13,7 +13,12 @@ export function getVersion(): string {
   return "0.0.0";
 }
 
-export type { CreateDocumentOptions, CreateStatementOptions, ProductInput } from "./create-options.js";
+export type {
+  CreateDocumentOptions,
+  CreateStatementOptions,
+  ProductInput,
+  SubcomponentInput,
+} from "./create-options.js";
 export { createDocument, createProduct, createStatement, createSubcomponent, createVulnerability } from "./document.js";
 export { OpenVexValidationError, type ValidationIssue } from "./errors.js";
 export { parseOpenVexDocument, parseOpenVexDocumentFromUnknown } from "./parse.js";

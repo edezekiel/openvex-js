@@ -9,6 +9,9 @@ import { normalizeDocument, runVexCtlCreate } from "./helpers/vexctl.js";
  */
 function expectParseMatchesOriginal(fixturePath: string): void {
   const fixture = loadFixture(fixturePath);
+  if (!fixture.vexctl) {
+    throw new Error(`Fixture ${fixturePath} does not have vexctl options`);
+  }
   const originalDoc = runVexCtlCreate(fixture.vexctl);
   const normalizedOriginal = normalizeDocument(originalDoc);
 
