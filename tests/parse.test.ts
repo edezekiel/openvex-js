@@ -1,59 +1,43 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseOpenVexDocument } from "../src/index.js";
-import { runVexCtlCreate, type VexCtlCreateOptions } from "./helpers/vexctl.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { loadFixture } from "./helpers/fixtures.js";
+import { normalizeDocument, runVexCtlCreate } from "./helpers/vexctl.js";
 
 /**
- * Helper to load create test fixtures
+ * Helper to test that parsing produces identical normalized output
+ * Ensures parse round-trip maintains all document structure
  */
-function loadFixture(path: string): { description: string; vexctl: VexCtlCreateOptions } {
-  const fullPath = join(__dirname, "fixtures", path);
-  const content = readFileSync(fullPath, "utf-8");
-  return JSON.parse(content) as { description: string; vexctl: VexCtlCreateOptions };
+function expectParseMatchesOriginal(fixturePath: string): void {
+  const fixture = loadFixture(fixturePath);
+  const originalDoc = runVexCtlCreate(fixture.vexctl);
+  const normalizedOriginal = normalizeDocument(originalDoc);
+
+  // Parse the document
+  const parsedDoc = parseOpenVexDocument(JSON.stringify(originalDoc));
+  const normalizedParsed = normalizeDocument(parsedDoc);
+
+  // Full equality check of normalized output
+  expect(normalizedParsed).toEqual(normalizedOriginal);
 }
 
 describe("parseOpenVexDocument", () => {
-  it("should parse basic fixed status document", () => {
-    const fixture = loadFixture("create/basic-fixed.json");
-    const vexctlDoc = runVexCtlCreate(fixture.vexctl);
+  const fixtureTests = [
+    { fixture: "create/basic-fixed.json", description: "basic fixed status document" },
+    { fixture: "create/multiple-products.json", description: "document with multiple products" },
+    { fixture: "create/not-affected-justification.json", description: "not_affected document with justification" },
+    {
+      fixture: "create/not-affected-impact-statement.json",
+      description: "not_affected document with impact statement only",
+    },
+    {
+      fixture: "create/not-affected-both.json",
+      description: "not_affected document with both justification and impact statement",
+    },
+    { fixture: "create/affected-action-statement.json", description: "affected document with action statement" },
+  ] as const;
 
-    const doc = parseOpenVexDocument(JSON.stringify(vexctlDoc));
-    expect(doc["@context"]).toBe("https://openvex.dev/ns/v0.2.0");
-    expect(doc.statements).toHaveLength(1);
-    expect(doc.statements[0]?.status).toBe("fixed");
-  });
-
-  it("should parse document with multiple products", () => {
-    const fixture = loadFixture("create/multiple-products.json");
-    const vexctlDoc = runVexCtlCreate(fixture.vexctl);
-
-    const doc = parseOpenVexDocument(JSON.stringify(vexctlDoc));
-    expect(doc.statements[0]?.products).toHaveLength(2);
-  });
-
-  it("should parse not_affected document with justification", () => {
-    const fixture = loadFixture("create/not-affected-justification.json");
-    const vexctlDoc = runVexCtlCreate(fixture.vexctl);
-
-    const doc = parseOpenVexDocument(JSON.stringify(vexctlDoc));
-    expect(doc.statements[0]?.status).toBe("not_affected");
-    const stmt = doc.statements[0] as { justification?: string };
-    expect(stmt.justification).toBe("component_not_present");
-  });
-
-  it("should parse affected document with action statement", () => {
-    const fixture = loadFixture("create/affected-action-statement.json");
-    const vexctlDoc = runVexCtlCreate(fixture.vexctl);
-
-    const doc = parseOpenVexDocument(JSON.stringify(vexctlDoc));
-    expect(doc.statements[0]?.status).toBe("affected");
-    const stmt = doc.statements[0] as { action_statement?: string };
-    expect(stmt.action_statement).toBeDefined();
+  it.each(fixtureTests)("should parse $description", ({ fixture }) => {
+    expectParseMatchesOriginal(fixture);
   });
 
   it("should throw error for invalid JSON", () => {

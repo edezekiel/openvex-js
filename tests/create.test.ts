@@ -1,67 +1,45 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { createDocument, createProduct } from "../src/index.js";
-import { normalizeDocument, runVexCtlCreate, type VexCtlCreateOptions } from "./helpers/vexctl.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { loadFixture } from "./helpers/fixtures.js";
+import { normalizeDocument, runVexCtlCreate } from "./helpers/vexctl.js";
 
 /**
- * Helper to load test fixtures
+ * Helper to test that library output matches vexctl output exactly
+ * Compares normalized documents to ensure identical structure
  */
-function loadFixture(path: string): { description: string; vexctl: VexCtlCreateOptions } {
-  const fullPath = join(__dirname, "fixtures", path);
-  const content = readFileSync(fullPath, "utf-8");
-  return JSON.parse(content) as { description: string; vexctl: VexCtlCreateOptions };
+function expectMatchesVexCtl(fixturePath: string): void {
+  const fixture = loadFixture(fixturePath);
+
+  // Run vexctl to get reference output
+  const vexctlOutput = runVexCtlCreate(fixture.vexctl);
+  const normalizedVexCtl = normalizeDocument(vexctlOutput);
+
+  // Create document using our library
+  const libraryOutput = createDocument(fixture.vexctl);
+  const normalizedLibrary = normalizeDocument(libraryOutput);
+
+  // Full equality check of normalized output
+  expect(normalizedLibrary).toEqual(normalizedVexCtl);
 }
 
 describe("createDocument", () => {
-  it("should create a basic fixed status document matching vexctl", () => {
-    const fixture = loadFixture("create/basic-fixed.json");
+  const fixtureTests = [
+    { fixture: "create/basic-fixed.json", description: "basic fixed status document" },
+    { fixture: "create/not-affected-justification.json", description: "not_affected document with justification" },
+    {
+      fixture: "create/not-affected-impact-statement.json",
+      description: "not_affected document with impact statement only",
+    },
+    {
+      fixture: "create/not-affected-both.json",
+      description: "not_affected document with both justification and impact statement",
+    },
+    { fixture: "create/affected-action-statement.json", description: "affected document with action statement" },
+    { fixture: "create/multiple-products.json", description: "document with multiple products" },
+  ] as const;
 
-    // Run vexctl to get reference output
-    const vexctlOutput = runVexCtlCreate(fixture.vexctl);
-    const normalizedVexCtl = normalizeDocument(vexctlOutput);
-
-    // Create document using our library
-    const libraryOutput = createDocument(fixture.vexctl);
-    const normalizedLibrary = normalizeDocument(libraryOutput);
-    expect(normalizedLibrary).toEqual(normalizedVexCtl);
-  });
-
-  it("should create not_affected document with justification matching vexctl", () => {
-    const fixture = loadFixture("create/not-affected-justification.json");
-    const vexctlOutput = runVexCtlCreate(fixture.vexctl);
-    const normalizedVexCtl = normalizeDocument(vexctlOutput);
-
-    // Create document using our library
-    const libraryOutput = createDocument(fixture.vexctl);
-    const normalizedLibrary = normalizeDocument(libraryOutput);
-    expect(normalizedLibrary).toEqual(normalizedVexCtl);
-  });
-
-  it("should create affected document with action statement matching vexctl", () => {
-    const fixture = loadFixture("create/affected-action-statement.json");
-    const vexctlOutput = runVexCtlCreate(fixture.vexctl);
-    const normalizedVexCtl = normalizeDocument(vexctlOutput);
-
-    // Create document using our library
-    const libraryOutput = createDocument(fixture.vexctl);
-    const normalizedLibrary = normalizeDocument(libraryOutput);
-    expect(normalizedLibrary).toEqual(normalizedVexCtl);
-  });
-
-  it("should create document with multiple products matching vexctl", () => {
-    const fixture = loadFixture("create/multiple-products.json");
-    const vexctlOutput = runVexCtlCreate(fixture.vexctl);
-    const normalizedVexCtl = normalizeDocument(vexctlOutput);
-
-    // Create document using our library
-    const libraryOutput = createDocument(fixture.vexctl);
-    const normalizedLibrary = normalizeDocument(libraryOutput);
-    expect(normalizedLibrary).toEqual(normalizedVexCtl);
+  it.each(fixtureTests)("should create $description matching vexctl", ({ fixture }) => {
+    expectMatchesVexCtl(fixture);
   });
 
   it("should throw error for invalid identifier types", () => {
@@ -76,8 +54,7 @@ describe("createDocument", () => {
     expect(() => createProduct("cpe:2.3:o:redhat:enterprise_linux:8:*:*:*:*:*:*:*")).not.toThrow();
   });
 
-  it("should require at least one of justification or impactStatement for not_affected", () => {
-    // Should throw if neither is provided
+  it("should throw error when not_affected status has neither justification nor impactStatement", () => {
     expect(() =>
       createDocument({
         product: "pkg:apk/wolfi/git@2.39.0-r1",
@@ -86,39 +63,5 @@ describe("createDocument", () => {
         author: "Test Author",
       }),
     ).toThrow("not_affected status requires either justification or impactStatement");
-
-    // Should work with just justification
-    expect(() =>
-      createDocument({
-        product: "pkg:apk/wolfi/git@2.39.0-r1",
-        vulnerability: "CVE-2023-12345",
-        status: "not_affected",
-        justification: "component_not_present",
-        author: "Test Author",
-      }),
-    ).not.toThrow();
-
-    // Should work with just impactStatement
-    expect(() =>
-      createDocument({
-        product: "pkg:apk/wolfi/git@2.39.0-r1",
-        vulnerability: "CVE-2023-12345",
-        status: "not_affected",
-        impactStatement: "The component is not present in this product",
-        author: "Test Author",
-      }),
-    ).not.toThrow();
-
-    // Should work with both
-    expect(() =>
-      createDocument({
-        product: "pkg:apk/wolfi/git@2.39.0-r1",
-        vulnerability: "CVE-2023-12345",
-        status: "not_affected",
-        justification: "component_not_present",
-        impactStatement: "The component is not present in this product",
-        author: "Test Author",
-      }),
-    ).not.toThrow();
   });
 });
