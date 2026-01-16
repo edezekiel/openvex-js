@@ -58,10 +58,10 @@ describe("parseOpenVexDocument", () => {
     const fixture = loadFixture("create/affected-action-statement.json");
     const _vexctlDoc = runVexCtlCreate(fixture.vexctl);
 
-  // TODO: Implement parseOpenVexDocument function
-  // const doc = parseOpenVexDocument(JSON.stringify(_vexctlDoc));
-  // expect(doc.statements[0].status).toBe("affected");
-  // expect(doc.statements[0].action_statement).toBeDefined();
+    // TODO: Implement parseOpenVexDocument function
+    // const doc = parseOpenVexDocument(JSON.stringify(_vexctlDoc));
+    // expect(doc.statements[0].status).toBe("affected");
+    // expect(doc.statements[0].action_statement).toBeDefined();
 
     expect(true).toBe(false);
   });
