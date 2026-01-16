@@ -1,0 +1,10 @@
+{
+  "description": "affected status with action statement",
+  "vexctl": {
+    "product": "pkg:apk/wolfi/git@2.39.0-r1",
+    "vulnerability": "CVE-2023-12345",
+    "status": "affected",
+    "actionStatement": "Customers are advised to upgrade to version 2.40.0",
+    "author": "Test Author"
+  }
+}
