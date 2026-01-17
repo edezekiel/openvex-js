@@ -1,67 +1,37 @@
-/**
- * Helper functions for executing vexctl and comparing outputs
- */
-
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import type { CreateDocumentOptions, ProductInput } from "../../src/create-options.js";
+import type { CreateDocumentOptions, ProductInput } from "../../src/classes/document.js";
 import type { Justification, StatementStatus } from "../../src/schemas.js";
 
-/**
- * Options for vexctl create command (single-statement format)
- * This matches the vexctl CLI interface, not our library's new API
- */
 export interface VexCtlOptions {
-  /** Single product identifier */
   product?: string;
-  /** Multiple product identifiers */
   products?: string[];
-  /** Vulnerability identifier */
   vulnerability: string;
-  /** Statement status */
   status: StatementStatus;
-  /** Document author */
   author: string;
-  /** Author's role */
   role?: string;
-  /** Custom document ID */
   id?: string;
-  /** Subcomponents (vexctl applies to all products) */
   subcomponents?: string[];
-  /** Vulnerability aliases */
   aliases?: string[];
-  /** Justification for not_affected status */
   justification?: Justification;
-  /** Action statement for affected status */
   actionStatement?: string;
-  /** Impact statement for not_affected status */
   impactStatement?: string;
-  /** Additional status notes */
   statusNote?: string;
-  /** Supplier information */
   supplier?: string;
 }
 
-/**
- * Convert VexCtlOptions to the new CreateDocumentOptions format
- */
 export function vexctlOptionsToCreateDocumentOptions(options: VexCtlOptions): CreateDocumentOptions {
-  // Handle product/products - vexctl uses singular 'product' or plural 'products'
   let productInputs: ProductInput[];
 
   if (options.products && options.products.length > 0) {
-    // Multiple products
     productInputs = options.products;
   } else if (options.product) {
-    // Single product
     productInputs = [options.product];
   } else {
     productInputs = [];
   }
 
-  // If subcomponents are specified and there's exactly one product, attach them
-  // (vexctl only allows subcomponents with single product)
   if (options.subcomponents && options.subcomponents.length > 0 && productInputs.length === 1) {
     const productId = productInputs[0];
     if (typeof productId === "string") {
@@ -89,29 +59,18 @@ export function vexctlOptionsToCreateDocumentOptions(options: VexCtlOptions): Cr
   };
 }
 
-/**
- * Execute `vexctl create` with the given options and return the JSON output
- *
- * vexctl accepts positional arguments: [product_id [vuln_id [status]]]
- * For multiple products, use --product flags
- */
 export function runVexCtlCreate(options: VexCtlOptions): unknown {
   const args: string[] = [];
 
-  // Normalize products
   const products = options.products ?? (options.product ? [options.product] : []);
 
-  // Handle products - if multiple, use --product flags; if single, use positional
   if (products.length > 1) {
-    // Multiple products: use --product flags
     for (const product of products) {
       args.push("--product", product);
     }
-    // Vulnerability and status must be flags when using multiple products
     args.push("--vuln", options.vulnerability);
     args.push("--status", options.status);
   } else {
-    // Single product: use positional arguments
     const product = products[0];
     if (product) {
       args.push(product);
@@ -120,54 +79,24 @@ export function runVexCtlCreate(options: VexCtlOptions): unknown {
     args.push(options.status);
   }
 
-  // Add author
   args.push("--author", options.author);
-
-  // Add role
-  if (options.role) {
-    args.push("--author-role", options.role);
-  }
-
-  // Add justification
-  if (options.justification) {
-    args.push("--justification", options.justification);
-  }
-
-  // Add action statement
-  if (options.actionStatement) {
-    args.push("--action-statement", options.actionStatement);
-  }
-
-  // Add impact statement
-  if (options.impactStatement) {
-    args.push("--impact-statement", options.impactStatement);
-  }
-
-  // Add status note
-  if (options.statusNote) {
-    args.push("--status-note", options.statusNote);
-  }
-
-  // Add subcomponents
+  if (options.role) args.push("--author-role", options.role);
+  if (options.justification) args.push("--justification", options.justification);
+  if (options.actionStatement) args.push("--action-statement", options.actionStatement);
+  if (options.impactStatement) args.push("--impact-statement", options.impactStatement);
+  if (options.statusNote) args.push("--status-note", options.statusNote);
   if (options.subcomponents) {
     for (const subcomponent of options.subcomponents) {
       args.push("--subcomponents", subcomponent);
     }
   }
-
-  // Add aliases
   if (options.aliases) {
     for (const alias of options.aliases) {
       args.push("--aliases", alias);
     }
   }
+  if (options.id) args.push("--id", options.id);
 
-  // Add document ID
-  if (options.id) {
-    args.push("--id", options.id);
-  }
-
-  // Always use local binary to ensure consistent version across all hosts
   const localVexCtl = join(process.cwd(), ".bin", "vexctl");
 
   if (!existsSync(localVexCtl)) {
@@ -175,7 +104,6 @@ export function runVexCtlCreate(options: VexCtlOptions): unknown {
   }
 
   try {
-    // Use spawnSync to properly handle arguments with special characters
     const result = spawnSync(localVexCtl, ["create", ...args], {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
@@ -202,10 +130,6 @@ export function runVexCtlCreate(options: VexCtlOptions): unknown {
   }
 }
 
-/**
- * Normalize a document by removing or normalizing dynamic fields
- * This allows comparison of documents that may have different IDs or timestamps
- */
 export function normalizeDocument(doc: unknown): unknown {
   if (typeof doc !== "object" || doc === null) {
     return doc;
@@ -213,21 +137,14 @@ export function normalizeDocument(doc: unknown): unknown {
 
   const normalized = { ...doc } as Record<string, unknown>;
 
-  // Remove or normalize @id (it's generated)
-  if ("@id" in normalized) {
-    normalized["@id"] = "<generated>";
-  }
-
-  // Normalize timestamps to a placeholder
+  if ("@id" in normalized) normalized["@id"] = "<generated>";
   if ("timestamp" in normalized && typeof normalized["timestamp"] === "string") {
     normalized["timestamp"] = "<timestamp>";
   }
-
   if ("last_updated" in normalized && typeof normalized["last_updated"] === "string") {
     normalized["last_updated"] = "<timestamp>";
   }
 
-  // Normalize statement timestamps
   if ("statements" in normalized && Array.isArray(normalized["statements"])) {
     normalized["statements"] = (normalized["statements"] as unknown[]).map((stmt: unknown) => {
       if (typeof stmt === "object" && stmt !== null) {

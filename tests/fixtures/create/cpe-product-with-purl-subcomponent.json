@@ -1,0 +1,10 @@
+{
+  "description": "CPE product with purl subcomponent (vexctl uses @id for both)",
+  "vexctl": {
+    "product": "cpe:2.3:a:microsoft:edge:120.0.2210.91:*:*:*:*:*:*:*",
+    "vulnerability": "CVE-2025-23166",
+    "status": "fixed",
+    "author": "Test Author",
+    "subcomponents": ["cpe:2.3:a:google:v8:12.0.267.17:*:*:*:*:*:*:*"]
+  }
+}

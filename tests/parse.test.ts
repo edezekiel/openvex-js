@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseOpenVexDocument } from "../src/index.js";
+import { OpenVexDocument } from "../src/index.js";
 import { loadFixture } from "./helpers/fixtures.js";
 import { normalizeDocument, runVexCtlCreate } from "./helpers/vexctl.js";
 
@@ -16,8 +16,8 @@ function expectParseMatchesOriginal(fixturePath: string): void {
   const normalizedOriginal = normalizeDocument(originalDoc);
 
   // Parse the document
-  const parsedDoc = parseOpenVexDocument(JSON.stringify(originalDoc));
-  const normalizedParsed = normalizeDocument(parsedDoc);
+  const parsedDoc = OpenVexDocument.parse(originalDoc);
+  const normalizedParsed = normalizeDocument(parsedDoc.toData());
 
   // Full equality check of normalized output
   expect(normalizedParsed).toEqual(normalizedOriginal);
@@ -46,11 +46,12 @@ describe("parseOpenVexDocument", () => {
     expectParseMatchesOriginal(fixture);
   });
 
-  it("should throw error for invalid JSON", () => {
-    expect(() => parseOpenVexDocument("invalid json")).toThrow();
+  it("should throw error for invalid input", () => {
+    expect(() => OpenVexDocument.parse("not an object" as unknown)).toThrow();
   });
 
   it("should throw error for missing required fields", () => {
-    expect(() => parseOpenVexDocument('{"@context": "https://openvex.dev/ns/v0.2.0"}')).toThrow();
+    const invalid = JSON.parse('{"@context": "https://openvex.dev/ns/v0.2.0"}');
+    expect(() => OpenVexDocument.parse(invalid)).toThrow();
   });
 });
