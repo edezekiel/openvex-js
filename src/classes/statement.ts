@@ -9,7 +9,6 @@ import type {
   Statement as StatementType,
   Vulnerability as VulnerabilityType,
 } from "../schemas.js";
-import { statementSchema } from "../schemas.js";
 import { Component, type SubcomponentInput } from "./component.js";
 import { Vulnerability } from "./vulnerability.js";
 
@@ -44,10 +43,6 @@ export class Statement {
   static create(options: CreateStatementOptions): Statement {
     const timestamp = options.timestamp ?? Temporal.Now.instant().toString();
     return new Statement(Statement.buildStatementData(options, timestamp));
-  }
-
-  static fromData(data: StatementType): Statement {
-    return new Statement(statementSchema.parse(structuredClone(data)));
   }
 
   private static buildStatementData(options: CreateStatementOptions, timestamp: string): StatementType {
