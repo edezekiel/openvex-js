@@ -2,7 +2,7 @@
 
 ## Quick Context
 
-OpenVEX is a TypeScript library implementing the OpenVEX specification for creating, validating, and working with VEX (Vulnerability Exploitability eXchange) documents. It provides type-safe interfaces and runtime validation using Valibot.
+OpenVEX is a TypeScript library implementing the OpenVEX specification for creating, validating, and working with VEX (Vulnerability Exploitability eXchange) documents. It provides type-safe interfaces and runtime validation using Zod.
 
 ---
 
@@ -22,7 +22,7 @@ OpenVEX is a TypeScript library implementing the OpenVEX specification for creat
 1. **TypeScript everywhere** - No `any` types without justification
 2. **Explicit interfaces** - Prefer interfaces in `src/types.ts` or colocated `types.ts` files
 3. **Biome defaults** - 2-space indentation, double quotes, trailing commas
-4. **Valibot for validation** - Use Valibot schemas for runtime validation alongside TypeScript types
+4. **Zod for validation** - Use Zod schemas for runtime validation alongside TypeScript types (zod is a peer dependency)
 5. **Build-free dev** - Development workflow uses TypeScript directly (no build step); tsdown only for distribution builds
 6. **No JS Date object** - Never use `new Date()` or the `Date` object; use `@js-temporal/polyfill` with `Temporal.Now.instant().toString()` for timestamps
 
@@ -50,7 +50,7 @@ openvex/
 ├── src/
 │   ├── index.ts              # Main entry point (exports everything)
 │   ├── types.ts              # TypeScript type definitions
-│   ├── schemas.ts            # Valibot validation schemas
+│   ├── schemas.ts            # Zod validation schemas
 │   ├── document.ts           # Document class/utilities
 │   ├── statement.ts          # Statement class/utilities
 │   ├── product.ts            # Product/Component types and utilities
@@ -124,7 +124,7 @@ openvex/
 - Favor unit tests for pure functions where inputs and outputs can be asserted without collaborators
 - Place all test files in `tests/` directory
 - Use real OpenVEX examples from the spec or vexctl repos when testing
-- Test both TypeScript types and Valibot schema validation
+- Test both TypeScript types and Zod schema validation
 - Use descriptive test names that explain what is being tested
 
 ---
@@ -135,7 +135,7 @@ openvex/
 - Name files with kebab-case for scripts and PascalCase for exported TypeScript classes
 - Use descriptive directory names for bounded contexts
 - Prefer explicit interfaces; avoid `any`
-- Keep Valibot schemas in sync with TypeScript types
+- Keep Zod schemas in sync with TypeScript types
 
 ---
 
@@ -150,9 +150,9 @@ openvex/
 
 ### Validation
 
-- Use Valibot schemas for runtime validation
+- Use Zod schemas for runtime validation
 - Validate against the official OpenVEX JSON schema structure
 - Provide clear error messages for validation failures
-- Leverage Valibot's modular design for tree-shaking and smaller bundle size
+- Zod is a peer dependency, allowing consumers to control the version
 
 ---

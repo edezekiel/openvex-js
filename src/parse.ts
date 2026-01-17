@@ -1,4 +1,4 @@
-import * as v from "valibot";
+import type { z } from "zod";
 import { OpenVexValidationError } from "./errors.js";
 import type { OpenVexDocument } from "./schemas.js";
 import { openVexDocumentSchema } from "./schemas.js";
@@ -27,24 +27,16 @@ export function parseOpenVexDocument(input: string): OpenVexDocument {
  * @throws OpenVexValidationError if validation fails
  */
 export function parseOpenVexDocumentFromUnknown(input: unknown): OpenVexDocument {
-  try {
-    return v.parse(openVexDocumentSchema, input);
-  } catch (error) {
-    if (error instanceof v.ValiError) {
-      const issues = error.issues.map((issue) => {
-        const path =
-          issue.path
-            ?.map((p: { key: string | number }) => (typeof p.key === "string" ? p.key : String(p.key)))
-            .join(".") || "root";
-        return { path, message: issue.message };
-      });
-      throw new OpenVexValidationError(
-        `Invalid OpenVEX document: ${issues.map((i) => `${i.path}: ${i.message}`).join("; ")}`,
-        issues,
-      );
-    }
+  const result = openVexDocumentSchema.safeParse(input);
+  if (!result.success) {
+    const issues = result.error.issues.map((issue: z.ZodIssue) => {
+      const path = issue.path.length > 0 ? issue.path.join(".") : "root";
+      return { path, message: issue.message };
+    });
     throw new OpenVexValidationError(
-      `Failed to parse OpenVEX document: ${error instanceof Error ? error.message : String(error)}`,
+      `Invalid OpenVEX document: ${issues.map((i) => `${i.path}: ${i.message}`).join("; ")}`,
+      issues,
     );
   }
+  return result.data;
 }

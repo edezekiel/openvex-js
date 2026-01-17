@@ -59,7 +59,7 @@ The `<area>` is **required** and must map to a real system boundary in the OpenV
 **Core Types & Validation:**
 
 - `types` - TypeScript type definitions
-- `schemas` - Valibot validation schemas
+- `schemas` - Zod validation schemas
 - `validation` - Validation utilities and error handling
 
 **OpenVEX Components:**
@@ -143,7 +143,7 @@ Before generating a commit message, inspect:
 4. ✅ **Project context**:
    - This is a **TypeScript library** implementing OpenVEX
    - Main components: document, statement, product, vulnerability
-   - Uses Valibot for runtime validation
+   - Uses Zod for runtime validation
    - Uses Vitest for testing
    - Build-free dev workflow with tsdown for distribution
 
@@ -188,7 +188,7 @@ feat(types): add openvex status enum types
 ### ✅ Schema Addition
 
 ```txt
-feat(schemas): add valibot vulnerability schema
+feat(schemas): add zod vulnerability schema
 ```
 
 ### ✅ Refactor

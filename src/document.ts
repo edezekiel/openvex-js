@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
-import * as v from "valibot";
 import type {
   CreateDocumentOptions,
   CreateStatementOptions,
@@ -57,7 +56,7 @@ function createComponentBase(identifier: string, hashes?: Hashes): Omit<Componen
     );
   }
   if (hashes) {
-    base.hashes = hashes;
+    base["hashes"] = hashes;
   }
   return base;
 }
@@ -116,7 +115,7 @@ function createComponentFromProductInput(input: ProductInput): Component {
  * Check if an object is a pre-built Statement by validating against the schema
  */
 function isStatement(obj: Statement | CreateStatementOptions): obj is Statement {
-  return v.is(statementSchema, obj);
+  return statementSchema.safeParse(obj).success;
 }
 
 /**
@@ -224,7 +223,7 @@ export function createDocument(options: CreateDocumentOptions): OpenVexDocument 
   };
 
   if (options.role !== undefined) {
-    docWithoutId.role = options.role;
+    docWithoutId["role"] = options.role;
   }
 
   const id = options.id || generateCanonicalId(docWithoutId);
