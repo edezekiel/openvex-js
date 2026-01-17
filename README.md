@@ -1,4 +1,4 @@
-# openvex
+# openvex-js
 
 TypeScript implementation of the OpenVEX specification for creating, validating, and working with VEX (Vulnerability Exploitability eXchange) documents.
 
