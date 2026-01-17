@@ -3,9 +3,6 @@ export interface ValidationIssue {
   message: string;
 }
 
-/**
- * Error thrown when OpenVEX document validation fails
- */
 export class OpenVexValidationError extends Error {
   public readonly issues?: ValidationIssue[];
 

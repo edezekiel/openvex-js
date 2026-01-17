@@ -1,13 +1,7 @@
-/**
- * Zod schemas for parsing OpenVEX documents
- * Based on OpenVEX JSON Schema v0.2.0
- */
+// Based on OpenVEX JSON Schema v0.2.0
 import { Temporal } from "@js-temporal/polyfill";
 import { z } from "zod";
 
-/**
- * Custom date-time validator that accepts ISO 8601 with nanoseconds
- */
 const dateTimeSchema = z.string().refine(
   (input: string) => {
     try {
@@ -35,16 +29,13 @@ const hashesSchema = z.object({
   "blake2b-512": z.string().optional(),
 });
 
-/**
- * Schema for identifiers (at least one required)
- */
 const identifiersSchema = z
   .object({
     purl: z.string().optional(),
     cpe22: z.string().optional(),
     cpe23: z.string().optional(),
   })
-  .refine((input: { purl?: string; cpe22?: string; cpe23?: string }) => !!(input.purl || input.cpe22 || input.cpe23), {
+  .refine((input) => !!(input.purl || input.cpe22 || input.cpe23), {
     message: "At least one identifier (purl, cpe22, or cpe23) is required",
   });
 
@@ -54,16 +45,9 @@ const subcomponentSchema = z
     identifiers: identifiersSchema.optional(),
     hashes: hashesSchema.optional(),
   })
-  .refine(
-    (input: {
-      "@id"?: string;
-      identifiers?: z.infer<typeof identifiersSchema>;
-      hashes?: z.infer<typeof hashesSchema>;
-    }) => !!(input["@id"] || input.identifiers),
-    {
-      message: "Subcomponent must have either @id or identifiers",
-    },
-  );
+  .refine((input) => !!(input["@id"] || input.identifiers), {
+    message: "Subcomponent must have either @id or identifiers",
+  });
 
 const componentSchema = z
   .object({
@@ -72,17 +56,20 @@ const componentSchema = z
     hashes: hashesSchema.optional(),
     subcomponents: z.array(subcomponentSchema).optional(),
   })
-  .refine(
-    (input: {
-      "@id"?: string;
-      identifiers?: z.infer<typeof identifiersSchema>;
-      hashes?: z.infer<typeof hashesSchema>;
-      subcomponents?: z.infer<typeof subcomponentSchema>[];
-    }) => !!(input["@id"] || input.identifiers),
-    {
-      message: "Component must have either @id or identifiers",
-    },
-  );
+  .refine((input) => !!(input["@id"] || input.identifiers), {
+    message: "Component must have either @id or identifiers",
+  });
+
+const identifierInputSchema = z.string().transform((val, ctx): { "@id": string } => {
+  if (val.startsWith("pkg:") || val.startsWith("cpe:2.2:") || val.startsWith("cpe:2.3:")) {
+    return { "@id": val };
+  }
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message: `Invalid identifier: "${val}". Must be purl (pkg:...), cpe22 (cpe:2.2:...), or cpe23 (cpe:2.3:...).`,
+  });
+  return z.NEVER;
+});
 
 const vulnerabilitySchema = z.object({
   "@id": z.string().url().optional(),
@@ -101,9 +88,6 @@ const justificationSchema = z.enum([
   "inline_mitigations_already_exist",
 ]);
 
-/**
- * Schema for not_affected statement (requires justification or impact_statement)
- */
 const notAffectedStatementSchema = z
   .object({
     "@id": z.string().url().optional(),
@@ -118,28 +102,10 @@ const notAffectedStatementSchema = z
     justification: justificationSchema.optional(),
     impact_statement: z.string().optional(),
   })
-  .refine(
-    (input: {
-      "@id"?: string;
-      version?: number;
-      vulnerability: z.infer<typeof vulnerabilitySchema>;
-      timestamp?: z.infer<typeof dateTimeSchema>;
-      last_updated?: z.infer<typeof dateTimeSchema>;
-      products?: z.infer<typeof componentSchema>[];
-      status: "not_affected";
-      supplier?: string;
-      status_notes?: string;
-      justification?: z.infer<typeof justificationSchema>;
-      impact_statement?: string;
-    }) => !!(input.justification || input.impact_statement),
-    {
-      message: "not_affected status requires either justification or impact_statement",
-    },
-  );
+  .refine((input) => !!(input.justification || input.impact_statement), {
+    message: "not_affected status requires either justification or impact_statement",
+  });
 
-/**
- * Schema for affected statement (requires action_statement)
- */
 const affectedStatementSchema = z.object({
   "@id": z.string().url().optional(),
   version: z.number().min(1).optional(),
@@ -166,9 +132,6 @@ const fixedOrUnderInvestigationStatementSchema = z.object({
   status_notes: z.string().optional(),
 });
 
-/**
- * Schema for any statement (union of all statement types)
- */
 export const statementSchema = z.union([
   notAffectedStatementSchema,
   affectedStatementSchema,
@@ -186,6 +149,8 @@ export const openVexDocumentSchema = z.object({
   tooling: z.string().optional(),
   statements: z.array(statementSchema).min(1),
 });
+
+export { identifierInputSchema };
 
 export type StatementStatus = z.infer<typeof statementStatusSchema>;
 export type Justification = z.infer<typeof justificationSchema>;
