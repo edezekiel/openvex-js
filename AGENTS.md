@@ -46,7 +46,7 @@ OpenVEX is a TypeScript library implementing the OpenVEX specification for creat
 ### Directory Structure
 
 ```bash
-openvex/
+openvex-js/
 ├── src/
 │   ├── index.ts              # Main entry point (exports everything)
 │   ├── types.ts              # TypeScript type definitions

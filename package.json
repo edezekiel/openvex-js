@@ -1,5 +1,5 @@
 {
-  "name": "openvex",
+  "name": "openvex-js",
   "version": "0.0.0",
   "description": "TypeScript implementation of the OpenVEX specification",
   "type": "module",
