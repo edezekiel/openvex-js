@@ -1,14 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type {
-  AffectedStatement,
-  Component as ComponentType,
-  FixedOrUnderInvestigationStatement,
-  Justification,
-  NotAffectedStatement,
-  StatementStatus,
-  Statement as StatementType,
-  Vulnerability as VulnerabilityType,
-} from "../schemas.js";
+import type { Justification, StatementStatus, Statement as StatementType } from "../schemas.js";
+import { statementSchema } from "../schemas.js";
 import { Component, type SubcomponentInput } from "./component.js";
 import { Vulnerability } from "./vulnerability.js";
 
@@ -57,41 +49,36 @@ export class Statement {
       aliases: options.aliases,
     }).toData();
 
-    const base: {
-      vulnerability: VulnerabilityType;
-      products: ComponentType[];
-      status: StatementStatus;
-      timestamp: string;
-      supplier?: string;
-      status_notes?: string;
-    } = { vulnerability, products, status: options.status, timestamp };
-
-    if (options.supplier) base.supplier = options.supplier;
-    if (options.statusNote) base.status_notes = options.statusNote;
-
-    if (options.status === "not_affected") {
-      if (!options.justification && !options.impactStatement) {
-        throw new Error("not_affected status requires either justification or impactStatement");
-      }
-      const stmt: NotAffectedStatement = { ...base, status: "not_affected" };
-      if (options.justification) stmt.justification = options.justification;
-      if (options.impactStatement) stmt.impact_statement = options.impactStatement;
-      return stmt;
-    }
-
-    if (options.status === "affected") {
-      if (!options.actionStatement) {
-        throw new Error("affected status requires actionStatement");
-      }
-      return {
-        ...base,
-        status: "affected",
+    const statementData: unknown = {
+      vulnerability,
+      products,
+      status: options.status,
+      timestamp,
+      ...(options.supplier && { supplier: options.supplier }),
+      ...(options.statusNote && { status_notes: options.statusNote }),
+      ...(options.justification && { justification: options.justification }),
+      ...(options.impactStatement && { impact_statement: options.impactStatement }),
+      ...(options.actionStatement && {
         action_statement: options.actionStatement,
         action_statement_timestamp: timestamp,
-      } satisfies AffectedStatement;
+      }),
+    };
+
+    const result = statementSchema.safeParse(statementData);
+    if (!result.success) {
+      const issues = result.error.issues;
+      for (const issue of issues) {
+        if (issue.message.includes("justification or impact_statement")) {
+          throw new Error("not_affected status requires either justification or impactStatement");
+        }
+        if (issue.message.includes("action_statement")) {
+          throw new Error("affected status requires actionStatement");
+        }
+      }
+      throw new Error(issues[0]?.message ?? "Invalid statement");
     }
 
-    return { ...base, status: options.status } satisfies FixedOrUnderInvestigationStatement;
+    return result.data;
   }
 
   toData(): StatementType {
