@@ -6,6 +6,6 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ["valibot"],
+  external: ["@js-temporal/polyfill", "zod"],
   outDir: "dist",
 });
