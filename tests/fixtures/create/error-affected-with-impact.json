@@ -8,5 +8,5 @@
     "actionStatement": "update to version 2.0",
     "impactStatement": "should not be set"
   },
-  "expectedError": "impact_statement should not be set when using status affected"
+  "expectedError": "Unrecognized key(s) in object: 'impact_statement'"
 }
