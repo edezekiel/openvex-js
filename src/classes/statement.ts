@@ -1,8 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { Justification, StatementStatus, Statement as StatementType } from "../schemas.js";
+import type { Justification, Statement, StatementStatus } from "../schemas.js";
 import { statementSchema } from "../schemas.js";
-import { Component, type SubcomponentInput } from "./component.js";
-import { Vulnerability } from "./vulnerability.js";
+import { ComponentBuilder, type SubcomponentInput } from "./component.js";
+import { VulnerabilityBuilder } from "./vulnerability.js";
 
 export type ProductInput =
   | string
@@ -25,26 +25,26 @@ export interface CreateStatementOptions {
   timestamp?: string;
 }
 
-export class Statement {
-  readonly #data: Readonly<StatementType>;
+export class StatementBuilder {
+  readonly #data: Readonly<Statement>;
 
-  private constructor(data: StatementType) {
+  private constructor(data: Statement) {
     this.#data = Object.freeze({ ...data });
   }
 
-  static create(options: CreateStatementOptions): Statement {
+  static create(options: CreateStatementOptions): StatementBuilder {
     const timestamp = options.timestamp ?? Temporal.Now.instant().toString();
-    return new Statement(Statement.buildStatementData(options, timestamp));
+    return new StatementBuilder(StatementBuilder.buildStatementData(options, timestamp));
   }
 
-  private static buildStatementData(options: CreateStatementOptions, timestamp: string): StatementType {
+  private static buildStatementData(options: CreateStatementOptions, timestamp: string): Statement {
     if (options.products.length === 0) {
       throw new Error("at least one product is required");
     }
 
-    const products = options.products.map((p) => Component.create(p).toData());
+    const products = options.products.map((p) => ComponentBuilder.create(p).toData());
 
-    const vulnerability = Vulnerability.create({
+    const vulnerability = VulnerabilityBuilder.create({
       name: options.vulnerability,
       aliases: options.aliases,
     }).toData();
@@ -73,7 +73,7 @@ export class Statement {
     return result.data;
   }
 
-  toData(): StatementType {
+  toData(): Statement {
     return structuredClone(this.#data);
   }
 }

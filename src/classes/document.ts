@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
 import { OpenVexValidationError } from "../errors.js";
-import type { OpenVexDocument as OpenVexDocumentType, Statement as StatementType } from "../schemas.js";
+import type { OpenVexDocument, Statement } from "../schemas.js";
 import { openVexDocumentSchema } from "../schemas.js";
-import { type CreateStatementOptions, Statement } from "./statement.js";
+import { type CreateStatementOptions, StatementBuilder } from "./statement.js";
 
 export interface CreateDocumentOptions {
   author?: string;
@@ -15,22 +15,24 @@ export interface CreateDocumentOptions {
 export type { SubcomponentInput } from "./component.js";
 export type { CreateStatementOptions, ProductInput } from "./statement.js";
 
-export class OpenVexDocument {
-  readonly #data: Readonly<OpenVexDocumentType>;
+export class DocumentBuilder {
+  readonly #data: Readonly<OpenVexDocument>;
 
-  private constructor(data: OpenVexDocumentType) {
+  private constructor(data: OpenVexDocument) {
     this.#data = Object.freeze({ ...data });
   }
 
-  static create(options: CreateDocumentOptions): OpenVexDocument {
+  static create(options: CreateDocumentOptions): DocumentBuilder {
     if (options.statements.length === 0) {
       throw new Error("at least one statement is required");
     }
 
     const timestamp = Temporal.Now.instant().toString();
-    const statements: StatementType[] = options.statements.map((s) => Statement.create({ ...s, timestamp }).toData());
+    const statements: Statement[] = options.statements.map((s) =>
+      StatementBuilder.create({ ...s, timestamp }).toData(),
+    );
 
-    const docWithoutId: Omit<OpenVexDocumentType, "@id"> = {
+    const docWithoutId: Omit<OpenVexDocument, "@id"> = {
       "@context": "https://openvex.dev/ns/v0.2.0",
       author: options.author ?? "Unknown Author",
       timestamp,
@@ -39,11 +41,11 @@ export class OpenVexDocument {
       ...(options.role && { role: options.role }),
     };
 
-    const id = options.id || OpenVexDocument.buildCanonicalId(docWithoutId);
-    return new OpenVexDocument({ ...docWithoutId, "@id": id });
+    const id = options.id || DocumentBuilder.buildCanonicalId(docWithoutId);
+    return new DocumentBuilder({ ...docWithoutId, "@id": id });
   }
 
-  private static buildCanonicalId(doc: Omit<OpenVexDocumentType, "@id">): string {
+  private static buildCanonicalId(doc: Omit<OpenVexDocument, "@id">): string {
     const { timestamp: _timestamp, last_updated: _last_updated, ...rest } = doc;
     const hash = createHash("sha256")
       .update(
@@ -63,7 +65,7 @@ export class OpenVexDocument {
     return `https://openvex.dev/docs/public/vex-${hash}`;
   }
 
-  static parse(input: unknown): OpenVexDocument {
+  static parse(input: unknown): DocumentBuilder {
     const result = openVexDocumentSchema.safeParse(input);
     if (!result.success) {
       const issues = result.error.issues.map((issue) => ({
@@ -75,14 +77,14 @@ export class OpenVexDocument {
         issues,
       );
     }
-    return new OpenVexDocument(result.data);
+    return new DocumentBuilder(result.data);
   }
 
   toJSON(): string {
     return JSON.stringify(this.#data, null, 2);
   }
 
-  toData(): OpenVexDocumentType {
+  toData(): OpenVexDocument {
     return structuredClone(this.#data);
   }
 }

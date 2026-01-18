@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { OpenVexDocument } from "../src/index.js";
+import { DocumentBuilder } from "../src/index.js";
 
 describe("OpenVEX Library", () => {
-  it("should export OpenVexDocument class", () => {
-    expect(OpenVexDocument).toBeDefined();
-    expect(typeof OpenVexDocument.create).toBe("function");
-    expect(typeof OpenVexDocument.parse).toBe("function");
+  it("should export DocumentBuilder class", () => {
+    expect(DocumentBuilder).toBeDefined();
+    expect(typeof DocumentBuilder.create).toBe("function");
+    expect(typeof DocumentBuilder.parse).toBe("function");
   });
 });
