@@ -6,7 +6,7 @@ import { openVexDocumentSchema } from "../schemas.js";
 import { type CreateStatementOptions, Statement } from "./statement.js";
 
 export interface CreateDocumentOptions {
-  author: string;
+  author?: string;
   role?: string;
   id?: string;
   statements: CreateStatementOptions[];
@@ -32,7 +32,7 @@ export class OpenVexDocument {
 
     const docWithoutId: Omit<OpenVexDocumentType, "@id"> = {
       "@context": "https://openvex.dev/ns/v0.2.0",
-      author: options.author,
+      author: options.author ?? "Unknown Author",
       timestamp,
       version: 1,
       statements,

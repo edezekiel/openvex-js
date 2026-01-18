@@ -1,0 +1,11 @@
+{
+  "description": "fixed status with justification",
+  "vexctl": {
+    "product": "pkg:apk/wolfi/git@2.39.0-r1",
+    "vulnerability": "CVE-2023-12345",
+    "status": "fixed",
+    "author": "Test Author",
+    "justification": "component_not_present"
+  },
+  "expectedError": "justification should not be set when using status fixed or under_investigation"
+}

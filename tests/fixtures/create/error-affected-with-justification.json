@@ -1,0 +1,12 @@
+{
+  "description": "affected status with justification",
+  "vexctl": {
+    "product": "pkg:apk/wolfi/git@2.39.0-r1",
+    "vulnerability": "CVE-2023-12345",
+    "status": "affected",
+    "author": "Test Author",
+    "actionStatement": "update to version 2.0",
+    "justification": "component_not_present"
+  },
+  "expectedError": "justification should not be set when using status affected"
+}
