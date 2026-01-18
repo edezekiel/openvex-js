@@ -66,16 +66,8 @@ export class Statement {
 
     const result = statementSchema.safeParse(statementData);
     if (!result.success) {
-      const issues = result.error.issues;
-      for (const issue of issues) {
-        if (issue.message.includes("justification or impact_statement")) {
-          throw new Error("not_affected status requires either justification or impactStatement");
-        }
-        if (issue.message.includes("action_statement")) {
-          throw new Error("affected status requires actionStatement");
-        }
-      }
-      throw new Error(issues[0]?.message ?? "Invalid statement");
+      const firstIssue = result.error.issues[0];
+      throw new Error(firstIssue?.message ?? "Invalid statement");
     }
 
     return result.data;

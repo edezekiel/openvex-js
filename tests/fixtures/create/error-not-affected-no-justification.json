@@ -1,0 +1,10 @@
+{
+  "description": "not_affected status with neither justification nor impactStatement",
+  "vexctl": {
+    "product": "pkg:apk/wolfi/git@2.39.0-r1",
+    "vulnerability": "CVE-2023-12345",
+    "status": "not_affected",
+    "author": "Test Author"
+  },
+  "expectedError": "not_affected status requires either justification or impact_statement"
+}

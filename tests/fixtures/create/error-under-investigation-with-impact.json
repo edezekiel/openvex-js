@@ -1,0 +1,11 @@
+{
+  "description": "under_investigation status with impactStatement",
+  "vexctl": {
+    "product": "pkg:apk/wolfi/git@2.39.0-r1",
+    "vulnerability": "CVE-2023-12345",
+    "status": "under_investigation",
+    "author": "Test Author",
+    "impactStatement": "should not be set"
+  },
+  "expectedError": "impact_statement should not be set when using status fixed or under_investigation"
+}

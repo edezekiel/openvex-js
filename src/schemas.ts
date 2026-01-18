@@ -101,36 +101,64 @@ const notAffectedStatementSchema = z
     status_notes: z.string().optional(),
     justification: justificationSchema.optional(),
     impact_statement: z.string().optional(),
+    action_statement: z.string().optional(),
+    action_statement_timestamp: dateTimeSchema.optional(),
   })
   .refine((input) => !!(input.justification || input.impact_statement), {
     message: "not_affected status requires either justification or impact_statement",
+  })
+  .refine((input) => !input.action_statement, {
+    message: "action_statement should not be set when using status not_affected",
   });
 
-const affectedStatementSchema = z.object({
-  "@id": z.string().url().optional(),
-  version: z.number().min(1).optional(),
-  vulnerability: vulnerabilitySchema,
-  timestamp: dateTimeSchema.optional(),
-  last_updated: dateTimeSchema.optional(),
-  products: z.array(componentSchema).optional(),
-  status: z.literal("affected"),
-  supplier: z.string().optional(),
-  status_notes: z.string().optional(),
-  action_statement: z.string(),
-  action_statement_timestamp: dateTimeSchema.optional(),
-});
+const affectedStatementSchema = z
+  .object({
+    "@id": z.string().url().optional(),
+    version: z.number().min(1).optional(),
+    vulnerability: vulnerabilitySchema,
+    timestamp: dateTimeSchema.optional(),
+    last_updated: dateTimeSchema.optional(),
+    products: z.array(componentSchema).optional(),
+    status: z.literal("affected"),
+    supplier: z.string().optional(),
+    status_notes: z.string().optional(),
+    justification: justificationSchema.optional(),
+    impact_statement: z.string().optional(),
+    action_statement: z.string(),
+    action_statement_timestamp: dateTimeSchema.optional(),
+  })
+  .refine((input) => !input.justification, {
+    message: "justification should not be set when using status affected",
+  })
+  .refine((input) => !input.impact_statement, {
+    message: "impact_statement should not be set when using status affected",
+  });
 
-const fixedOrUnderInvestigationStatementSchema = z.object({
-  "@id": z.string().url().optional(),
-  version: z.number().min(1).optional(),
-  vulnerability: vulnerabilitySchema,
-  timestamp: dateTimeSchema.optional(),
-  last_updated: dateTimeSchema.optional(),
-  products: z.array(componentSchema).optional(),
-  status: z.enum(["fixed", "under_investigation"]),
-  supplier: z.string().optional(),
-  status_notes: z.string().optional(),
-});
+const fixedOrUnderInvestigationStatementSchema = z
+  .object({
+    "@id": z.string().url().optional(),
+    version: z.number().min(1).optional(),
+    vulnerability: vulnerabilitySchema,
+    timestamp: dateTimeSchema.optional(),
+    last_updated: dateTimeSchema.optional(),
+    products: z.array(componentSchema).optional(),
+    status: z.enum(["fixed", "under_investigation"]),
+    supplier: z.string().optional(),
+    status_notes: z.string().optional(),
+    justification: justificationSchema.optional(),
+    impact_statement: z.string().optional(),
+    action_statement: z.string().optional(),
+    action_statement_timestamp: dateTimeSchema.optional(),
+  })
+  .refine((input) => !input.justification, {
+    message: "justification should not be set when using status fixed or under_investigation",
+  })
+  .refine((input) => !input.impact_statement, {
+    message: "impact_statement should not be set when using status fixed or under_investigation",
+  })
+  .refine((input) => !input.action_statement, {
+    message: "action_statement should not be set when using status fixed or under_investigation",
+  });
 
 export const statementSchema = z.union([
   notAffectedStatementSchema,

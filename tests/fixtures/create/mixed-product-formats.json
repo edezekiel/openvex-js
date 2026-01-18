@@ -1,0 +1,20 @@
+{
+  "description": "Mixed product formats (string and object)",
+  "library": {
+    "author": "Security Team",
+    "statements": [
+      {
+        "vulnerability": "CVE-2023-12345",
+        "status": "fixed",
+        "products": [
+          "pkg:apk/wolfi/git@2.39.0-r1",
+          {
+            "id": "pkg:apk/wolfi/curl@7.87.0-r0",
+            "subcomponents": ["pkg:apk/wolfi/openssl@3.0.7-r0"]
+          },
+          "pkg:apk/wolfi/openssl@3.0.7-r0"
+        ]
+      }
+    ]
+  }
+}

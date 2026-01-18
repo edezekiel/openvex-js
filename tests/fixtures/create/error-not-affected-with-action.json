@@ -1,0 +1,12 @@
+{
+  "description": "not_affected status with actionStatement",
+  "vexctl": {
+    "product": "pkg:apk/wolfi/git@2.39.0-r1",
+    "vulnerability": "CVE-2023-12345",
+    "status": "not_affected",
+    "author": "Test Author",
+    "justification": "component_not_present",
+    "actionStatement": "should not be set"
+  },
+  "expectedError": "action_statement should not be set when using status not_affected"
+}

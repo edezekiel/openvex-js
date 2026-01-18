@@ -1,0 +1,38 @@
+{
+  "description": "Multiple statements with different statuses and options",
+  "library": {
+    "author": "Security Team",
+    "role": "Vulnerability Analyst",
+    "statements": [
+      {
+        "vulnerability": "CVE-2023-1111",
+        "status": "fixed",
+        "products": ["pkg:apk/wolfi/git@2.39.0-r1"],
+        "statusNote": "Patched in version 2.39.0-r1"
+      },
+      {
+        "vulnerability": "CVE-2023-2222",
+        "status": "affected",
+        "products": ["pkg:apk/wolfi/curl@7.86.0-r0"],
+        "actionStatement": "Upgrade to curl 7.87.0-r0 or later"
+      },
+      {
+        "vulnerability": "CVE-2023-3333",
+        "status": "not_affected",
+        "products": [
+          {
+            "id": "pkg:apk/wolfi/openssl@3.0.7-r0",
+            "subcomponents": ["pkg:apk/wolfi/libssl@3.0.7-r0"]
+          }
+        ],
+        "justification": "vulnerable_code_not_present",
+        "impactStatement": "The vulnerable code path is not compiled in this build"
+      },
+      {
+        "vulnerability": "CVE-2023-4444",
+        "status": "under_investigation",
+        "products": ["pkg:apk/wolfi/nginx@1.25.0-r0"]
+      }
+    ]
+  }
+}
