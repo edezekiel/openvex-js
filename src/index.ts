@@ -1,27 +1,23 @@
-export { Component } from "./classes/component.js";
+export { ComponentBuilder } from "./classes/component.js";
 export type {
   CreateDocumentOptions,
   CreateStatementOptions,
   ProductInput,
   SubcomponentInput,
 } from "./classes/document.js";
-export { OpenVexDocument } from "./classes/document.js";
-export { Statement } from "./classes/statement.js";
-export { Vulnerability } from "./classes/vulnerability.js";
+export { DocumentBuilder } from "./classes/document.js";
+export { StatementBuilder } from "./classes/statement.js";
+export { VulnerabilityBuilder } from "./classes/vulnerability.js";
 export { OpenVexValidationError, type ValidationIssue } from "./errors.js";
 export type {
-  AffectedStatement,
-  Component as ComponentType,
-  FixedStatement,
+  Component,
   HashAlgorithm,
   Hashes,
   Identifiers,
   Justification,
-  NotAffectedStatement,
-  OpenVexDocument as OpenVexDocumentType,
-  Statement as StatementType,
+  OpenVexDocument,
+  Statement,
   StatementStatus,
   Subcomponent,
-  UnderInvestigationStatement,
-  Vulnerability as VulnerabilityType,
+  Vulnerability,
 } from "./schemas.js";

@@ -104,66 +104,31 @@ const notAffectedStatementSchema = baseStatementSchema
     status: z.literal("not_affected"),
     justification: justificationSchema.optional(),
     impact_statement: z.string().optional(),
-    action_statement: z.string().optional(),
-    action_statement_timestamp: dateTimeSchema.optional(),
   })
-  .refine((input) => !!(input.justification || input.impact_statement), {
+  .strict()
+  .refine((s) => s.justification || s.impact_statement, {
     message: "not_affected status requires either justification or impact_statement",
-  })
-  .refine((input) => !input.action_statement, {
-    message: "action_statement should not be set when using status not_affected",
   });
 
 const affectedStatementSchema = baseStatementSchema
   .extend({
     status: z.literal("affected"),
-    justification: justificationSchema.optional(),
-    impact_statement: z.string().optional(),
     action_statement: z.string(),
     action_statement_timestamp: dateTimeSchema.optional(),
   })
-  .refine((input) => !input.justification, {
-    message: "justification should not be set when using status affected",
-  })
-  .refine((input) => !input.impact_statement, {
-    message: "impact_statement should not be set when using status affected",
-  });
+  .strict();
 
 const fixedStatementSchema = baseStatementSchema
   .extend({
     status: z.literal("fixed"),
-    justification: justificationSchema.optional(),
-    impact_statement: z.string().optional(),
-    action_statement: z.string().optional(),
-    action_statement_timestamp: dateTimeSchema.optional(),
   })
-  .refine((input) => !input.justification, {
-    message: "justification should not be set when using status fixed",
-  })
-  .refine((input) => !input.impact_statement, {
-    message: "impact_statement should not be set when using status fixed",
-  })
-  .refine((input) => !input.action_statement, {
-    message: "action_statement should not be set when using status fixed",
-  });
+  .strict();
 
 const underInvestigationStatementSchema = baseStatementSchema
   .extend({
     status: z.literal("under_investigation"),
-    justification: justificationSchema.optional(),
-    impact_statement: z.string().optional(),
-    action_statement: z.string().optional(),
-    action_statement_timestamp: dateTimeSchema.optional(),
   })
-  .refine((input) => !input.justification, {
-    message: "justification should not be set when using status under_investigation",
-  })
-  .refine((input) => !input.impact_statement, {
-    message: "impact_statement should not be set when using status under_investigation",
-  })
-  .refine((input) => !input.action_statement, {
-    message: "action_statement should not be set when using status under_investigation",
-  });
+  .strict();
 
 export const statementSchema = z.union([
   notAffectedStatementSchema,
@@ -172,19 +137,25 @@ export const statementSchema = z.union([
   underInvestigationStatementSchema,
 ]);
 
-export const openVexDocumentSchema = z.object({
-  "@context": z.string().url(),
-  "@id": z.string().url(),
-  author: z.string(),
-  role: z.string().optional(),
-  timestamp: dateTimeSchema,
-  last_updated: dateTimeSchema.optional(),
-  version: z.number().min(1),
-  tooling: z.string().optional(),
-  statements: z.array(statementSchema).min(1),
+const contextSchema = z.string().regex(/^https:\/\/openvex\.dev\/ns\/v\d+\.\d+\.\d+$/, {
+  message: "@context must be a valid OpenVEX context URL (https://openvex.dev/ns/v<version>)",
 });
 
-export { identifierInputSchema };
+export const openVexDocumentSchema = z
+  .object({
+    "@context": contextSchema,
+    "@id": z.string().url(),
+    author: z.string(),
+    role: z.string().optional(),
+    timestamp: dateTimeSchema,
+    last_updated: dateTimeSchema.optional(),
+    version: z.number().min(1),
+    tooling: z.string().optional(),
+    statements: z.array(statementSchema).min(1),
+  })
+  .strict();
+
+export { identifierInputSchema, vulnerabilitySchema };
 
 export type StatementStatus = z.infer<typeof statementStatusSchema>;
 export type Justification = z.infer<typeof justificationSchema>;
@@ -194,9 +165,5 @@ export type Identifiers = z.infer<typeof identifiersSchema>;
 export type Subcomponent = z.infer<typeof subcomponentSchema>;
 export type Component = z.infer<typeof componentSchema>;
 export type Vulnerability = z.infer<typeof vulnerabilitySchema>;
-export type NotAffectedStatement = z.infer<typeof notAffectedStatementSchema>;
-export type AffectedStatement = z.infer<typeof affectedStatementSchema>;
-export type FixedStatement = z.infer<typeof fixedStatementSchema>;
-export type UnderInvestigationStatement = z.infer<typeof underInvestigationStatementSchema>;
 export type Statement = z.infer<typeof statementSchema>;
 export type OpenVexDocument = z.infer<typeof openVexDocumentSchema>;
