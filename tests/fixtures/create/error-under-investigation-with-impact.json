@@ -7,5 +7,5 @@
     "author": "Test Author",
     "impactStatement": "should not be set"
   },
-  "expectedError": "impact_statement should not be set when using status fixed or under_investigation"
+  "expectedError": "impact_statement should not be set when using status under_investigation"
 }

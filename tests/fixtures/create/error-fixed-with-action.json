@@ -7,5 +7,5 @@
     "author": "Test Author",
     "actionStatement": "should not be set"
   },
-  "expectedError": "action_statement should not be set when using status fixed or under_investigation"
+  "expectedError": "action_statement should not be set when using status fixed"
 }

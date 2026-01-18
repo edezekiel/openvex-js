@@ -88,17 +88,20 @@ const justificationSchema = z.enum([
   "inline_mitigations_already_exist",
 ]);
 
-const notAffectedStatementSchema = z
-  .object({
-    "@id": z.string().url().optional(),
-    version: z.number().min(1).optional(),
-    vulnerability: vulnerabilitySchema,
-    timestamp: dateTimeSchema.optional(),
-    last_updated: dateTimeSchema.optional(),
-    products: z.array(componentSchema).optional(),
+const baseStatementSchema = z.object({
+  "@id": z.string().url().optional(),
+  version: z.number().min(1).optional(),
+  vulnerability: vulnerabilitySchema,
+  timestamp: dateTimeSchema.optional(),
+  last_updated: dateTimeSchema.optional(),
+  products: z.array(componentSchema).optional(),
+  supplier: z.string().optional(),
+  status_notes: z.string().optional(),
+});
+
+const notAffectedStatementSchema = baseStatementSchema
+  .extend({
     status: z.literal("not_affected"),
-    supplier: z.string().optional(),
-    status_notes: z.string().optional(),
     justification: justificationSchema.optional(),
     impact_statement: z.string().optional(),
     action_statement: z.string().optional(),
@@ -111,17 +114,9 @@ const notAffectedStatementSchema = z
     message: "action_statement should not be set when using status not_affected",
   });
 
-const affectedStatementSchema = z
-  .object({
-    "@id": z.string().url().optional(),
-    version: z.number().min(1).optional(),
-    vulnerability: vulnerabilitySchema,
-    timestamp: dateTimeSchema.optional(),
-    last_updated: dateTimeSchema.optional(),
-    products: z.array(componentSchema).optional(),
+const affectedStatementSchema = baseStatementSchema
+  .extend({
     status: z.literal("affected"),
-    supplier: z.string().optional(),
-    status_notes: z.string().optional(),
     justification: justificationSchema.optional(),
     impact_statement: z.string().optional(),
     action_statement: z.string(),
@@ -134,36 +129,47 @@ const affectedStatementSchema = z
     message: "impact_statement should not be set when using status affected",
   });
 
-const fixedOrUnderInvestigationStatementSchema = z
-  .object({
-    "@id": z.string().url().optional(),
-    version: z.number().min(1).optional(),
-    vulnerability: vulnerabilitySchema,
-    timestamp: dateTimeSchema.optional(),
-    last_updated: dateTimeSchema.optional(),
-    products: z.array(componentSchema).optional(),
-    status: z.enum(["fixed", "under_investigation"]),
-    supplier: z.string().optional(),
-    status_notes: z.string().optional(),
+const fixedStatementSchema = baseStatementSchema
+  .extend({
+    status: z.literal("fixed"),
     justification: justificationSchema.optional(),
     impact_statement: z.string().optional(),
     action_statement: z.string().optional(),
     action_statement_timestamp: dateTimeSchema.optional(),
   })
   .refine((input) => !input.justification, {
-    message: "justification should not be set when using status fixed or under_investigation",
+    message: "justification should not be set when using status fixed",
   })
   .refine((input) => !input.impact_statement, {
-    message: "impact_statement should not be set when using status fixed or under_investigation",
+    message: "impact_statement should not be set when using status fixed",
   })
   .refine((input) => !input.action_statement, {
-    message: "action_statement should not be set when using status fixed or under_investigation",
+    message: "action_statement should not be set when using status fixed",
+  });
+
+const underInvestigationStatementSchema = baseStatementSchema
+  .extend({
+    status: z.literal("under_investigation"),
+    justification: justificationSchema.optional(),
+    impact_statement: z.string().optional(),
+    action_statement: z.string().optional(),
+    action_statement_timestamp: dateTimeSchema.optional(),
+  })
+  .refine((input) => !input.justification, {
+    message: "justification should not be set when using status under_investigation",
+  })
+  .refine((input) => !input.impact_statement, {
+    message: "impact_statement should not be set when using status under_investigation",
+  })
+  .refine((input) => !input.action_statement, {
+    message: "action_statement should not be set when using status under_investigation",
   });
 
 export const statementSchema = z.union([
   notAffectedStatementSchema,
   affectedStatementSchema,
-  fixedOrUnderInvestigationStatementSchema,
+  fixedStatementSchema,
+  underInvestigationStatementSchema,
 ]);
 
 export const openVexDocumentSchema = z.object({
@@ -190,6 +196,7 @@ export type Component = z.infer<typeof componentSchema>;
 export type Vulnerability = z.infer<typeof vulnerabilitySchema>;
 export type NotAffectedStatement = z.infer<typeof notAffectedStatementSchema>;
 export type AffectedStatement = z.infer<typeof affectedStatementSchema>;
-export type FixedOrUnderInvestigationStatement = z.infer<typeof fixedOrUnderInvestigationStatementSchema>;
+export type FixedStatement = z.infer<typeof fixedStatementSchema>;
+export type UnderInvestigationStatement = z.infer<typeof underInvestigationStatementSchema>;
 export type Statement = z.infer<typeof statementSchema>;
 export type OpenVexDocument = z.infer<typeof openVexDocumentSchema>;
