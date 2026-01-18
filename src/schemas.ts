@@ -137,11 +137,9 @@ export const statementSchema = z.union([
   underInvestigationStatementSchema,
 ]);
 
-const contextSchema = z
-  .string()
-  .regex(/^https:\/\/openvex\.dev\/ns\/v\d+\.\d+\.\d+$/, {
-    message: "@context must be a valid OpenVEX context URL (https://openvex.dev/ns/v<version>)",
-  });
+const contextSchema = z.string().regex(/^https:\/\/openvex\.dev\/ns\/v\d+\.\d+\.\d+$/, {
+  message: "@context must be a valid OpenVEX context URL (https://openvex.dev/ns/v<version>)",
+});
 
 export const openVexDocumentSchema = z
   .object({
