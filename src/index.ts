@@ -12,7 +12,7 @@ export { OpenVexValidationError, type ValidationIssue } from "./errors.js";
 export type {
   AffectedStatement,
   Component as ComponentType,
-  FixedOrUnderInvestigationStatement,
+  FixedStatement,
   HashAlgorithm,
   Hashes,
   Identifiers,
@@ -22,5 +22,6 @@ export type {
   Statement as StatementType,
   StatementStatus,
   Subcomponent,
+  UnderInvestigationStatement,
   Vulnerability as VulnerabilityType,
 } from "./schemas.js";
