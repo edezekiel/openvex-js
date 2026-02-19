@@ -20,7 +20,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "install-vexctl": "node scripts/install-vexctl.ts",
+    "install-vexctl": "node --env-file=.env scripts/install-vexctl.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsdown; test -f dist/index.mjs",
     "dev": "tsdown --watch",

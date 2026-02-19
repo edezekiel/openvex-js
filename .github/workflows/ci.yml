@@ -38,18 +38,15 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
 
-      - name: Get vexctl version
-        id: vexctl-version
-        run: |
-          VERSION=$(grep -o 'VEXCTL_VERSION = "[^"]*"' scripts/install-vexctl.ts | cut -d'"' -f2)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Load .env
+        run: cat .env >> $GITHUB_ENV
 
       - name: Cache vexctl binary
         uses: actions/cache@v4
         id: cache-vexctl
         with:
           path: .bin/vexctl
-          key: vexctl-${{ steps.vexctl-version.outputs.version }}-linux-amd64
+          key: vexctl-${{ env.VEXCTL_VERSION }}-linux-amd64
 
       - name: Install vexctl
         if: steps.cache-vexctl.outputs.cache-hit != 'true'
