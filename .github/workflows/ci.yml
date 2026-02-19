@@ -26,38 +26,23 @@ jobs:
       - name: Run Biome
         run: biome ci
 
-  build-and-test:
-    name: Build and Test (Node ${{ matrix.node-version }})
+  build:
+    name: Build
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20, 22, 24]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version-file: ".nvmrc"
           cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Enable TypeScript stripping for older Node
-        if: matrix.node-version < 23
-        run: echo "NODE_OPTIONS=--experimental-strip-types" >> $GITHUB_ENV
+      - run: pnpm install --frozen-lockfile
 
       - name: Get vexctl version
         id: vexctl-version
         run: |
           VERSION=$(grep -o 'VEXCTL_VERSION = "[^"]*"' scripts/install-vexctl.ts | cut -d'"' -f2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Detected vexctl version: $VERSION"
 
       - name: Cache vexctl binary
         uses: actions/cache@v4
@@ -65,22 +50,48 @@ jobs:
         with:
           path: .bin/vexctl
           key: vexctl-${{ steps.vexctl-version.outputs.version }}-linux-amd64
-          restore-keys: |
-            vexctl-${{ steps.vexctl-version.outputs.version }}-
-            vexctl-
 
       - name: Install vexctl
         if: steps.cache-vexctl.outputs.cache-hit != 'true'
         run: pnpm run install-vexctl
 
-      - name: Make vexctl executable
-        run: chmod +x .bin/vexctl
-
       - name: Typecheck
         run: pnpm run typecheck
 
-      - name: Run tests
-        run: pnpm test
-
       - name: Build
         run: pnpm run build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            .bin/
+
+  test:
+    name: Test (Node ${{ matrix.node-version }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Make vexctl executable
+        run: chmod +x .bin/vexctl
+
+      - name: Run tests
+        run: pnpm test
