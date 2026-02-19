@@ -16,8 +16,10 @@ const ROOT_DIR = join(__dirname, "..");
 const VEXCTL_DIR = join(ROOT_DIR, ".bin");
 const VEXCTL_BINARY = join(VEXCTL_DIR, "vexctl");
 
-// Pinned version - update this when you want to pin to a specific version
-const VEXCTL_VERSION = "v0.4.1";
+const VEXCTL_VERSION = process.env.VEXCTL_VERSION;
+if (!VEXCTL_VERSION) {
+  throw new Error("VEXCTL_VERSION environment variable is required. Run with: node --env-file=.env scripts/install-vexctl.ts");
+}
 
 function getPlatformBinary(): string {
   const platform = process.platform;
