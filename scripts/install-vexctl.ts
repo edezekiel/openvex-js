@@ -18,7 +18,9 @@ const VEXCTL_BINARY = join(VEXCTL_DIR, "vexctl");
 
 const VEXCTL_VERSION = process.env.VEXCTL_VERSION;
 if (!VEXCTL_VERSION) {
-  throw new Error("VEXCTL_VERSION environment variable is required. Run with: node --env-file=.env scripts/install-vexctl.ts");
+  throw new Error(
+    "VEXCTL_VERSION environment variable is required. Run with: node --env-file=.env scripts/install-vexctl.ts",
+  );
 }
 
 function getPlatformBinary(): string {
