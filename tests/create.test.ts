@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ComponentBuilder, DocumentBuilder } from "../src/index.js";
+import { Component, Document } from "../src/index.js";
 import { loadFixture, vexctlFixtureTests } from "./helpers/fixtures.js";
 import { normalizeDocument, runVexCtlCreate, vexctlOptionsToCreateDocumentOptions } from "./helpers/vexctl.js";
 
@@ -14,14 +14,14 @@ function expectMatchesVexCtl(fixturePath: string): void {
   const library = vexctlOptionsToCreateDocumentOptions(vexctl);
 
   if (fixture.expectedError) {
-    expect(() => DocumentBuilder.create(library)).toThrow(fixture.expectedError);
+    expect(() => Document.create(library)).toThrow(fixture.expectedError);
     expect(() => runVexCtlCreate(vexctl)).toThrow();
   } else {
     const vexctlOutput = runVexCtlCreate(vexctl);
     const normalizedVexCtl = normalizeDocument(vexctlOutput);
 
-    const libraryDoc = DocumentBuilder.create(library);
-    const normalizedLibrary = normalizeDocument(libraryDoc.toData());
+    const libraryDoc = Document.create(library);
+    const normalizedLibrary = normalizeDocument(libraryDoc.toJSON());
 
     expect(normalizedLibrary).toEqual(normalizedVexCtl);
   }
@@ -34,10 +34,10 @@ function expectValidLibraryDocument(fixturePath: string): void {
     throw new Error(`Fixture ${fixturePath} does not have library options`);
   }
 
-  const doc = DocumentBuilder.create(fixture.library);
+  const doc = Document.create(fixture.library);
 
-  const parsed = DocumentBuilder.parse(doc.toData());
-  expect(parsed.toData()).toEqual(doc.toData());
+  const parsed = Document.parse(doc.toJSON());
+  expect(parsed.toJSON()).toEqual(doc.toJSON());
 }
 
 describe("createDocument", () => {
@@ -46,10 +46,10 @@ describe("createDocument", () => {
   });
 
   it("should throw error for invalid identifier types", () => {
-    expect(() => ComponentBuilder.create("invalid-identifier")).toThrow(/Invalid identifier.*invalid-identifier/);
-    expect(() => ComponentBuilder.create("pkg:apk/wolfi/git@2.39.0-r1")).not.toThrow();
-    expect(() => ComponentBuilder.create("cpe:2.2:o:redhat:enterprise_linux:8")).not.toThrow();
-    expect(() => ComponentBuilder.create("cpe:2.3:o:redhat:enterprise_linux:8:*:*:*:*:*:*:*")).not.toThrow();
+    expect(() => Component.create("invalid-identifier")).toThrow(/Invalid identifier.*invalid-identifier/);
+    expect(() => Component.create("pkg:apk/wolfi/git@2.39.0-r1")).not.toThrow();
+    expect(() => Component.create("cpe:2.2:o:redhat:enterprise_linux:8")).not.toThrow();
+    expect(() => Component.create("cpe:2.3:o:redhat:enterprise_linux:8:*:*:*:*:*:*:*")).not.toThrow();
   });
 });
 

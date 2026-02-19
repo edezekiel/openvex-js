@@ -8,5 +8,5 @@
     "actionStatement": "update to version 2.0",
     "justification": "component_not_present"
   },
-  "expectedError": "Unrecognized key(s) in object: 'justification'"
+  "expectedError": "justification is not allowed when status is affected"
 }

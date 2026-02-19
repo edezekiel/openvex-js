@@ -26,28 +26,23 @@ jobs:
       - name: Run Biome
         run: biome ci
 
-  build-and-test:
-    name: Build and Test
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Use Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
 
       - name: Get vexctl version
         id: vexctl-version
         run: |
           VERSION=$(grep -o 'VEXCTL_VERSION = "[^"]*"' scripts/install-vexctl.ts | cut -d'"' -f2)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Detected vexctl version: $VERSION"
 
       - name: Cache vexctl binary
         uses: actions/cache@v4
@@ -55,22 +50,47 @@ jobs:
         with:
           path: .bin/vexctl
           key: vexctl-${{ steps.vexctl-version.outputs.version }}-linux-amd64
-          restore-keys: |
-            vexctl-${{ steps.vexctl-version.outputs.version }}-
-            vexctl-
 
       - name: Install vexctl
         if: steps.cache-vexctl.outputs.cache-hit != 'true'
-        run: npm run install-vexctl
+        run: pnpm run install-vexctl
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Upload vexctl
+        uses: actions/upload-artifact@v4
+        with:
+          name: vexctl
+          path: .bin/vexctl
+
+  test:
+    name: Test (Node ${{ matrix.node-version }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
+
+      - name: Download vexctl
+        uses: actions/download-artifact@v4
+        with:
+          name: vexctl
+          path: .bin/
 
       - name: Make vexctl executable
         run: chmod +x .bin/vexctl
 
-      - name: Typecheck
-        run: npm run typecheck
-
       - name: Run tests
-        run: npm test
-
-      - name: Build
-        run: npm run build
+        run: pnpm test

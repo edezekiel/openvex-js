@@ -1,158 +1,43 @@
-# Repository Guidelines
+# AGENTS.md
 
-## Quick Context
+This file provides guidance to AI coding assistants working with code in this repository.
 
-OpenVEX is a TypeScript library implementing the OpenVEX specification for creating, validating, and working with VEX (Vulnerability Exploitability eXchange) documents. It provides type-safe interfaces and runtime validation using Zod.
+## Commands
 
----
+- `pnpm test` — run all tests (vitest)
+- `pnpm vitest run tests/create.test.ts` — run a single test file
+- `pnpm vitest run -t "description"` — run tests matching a pattern
+- `pnpm run typecheck` — TypeScript type checking (tsc --noEmit)
+- `pnpm run biome` — lint/format check (Biome)
+- `pnpm run biome:fix` — auto-fix lint/format issues
+- `pnpm run build` — build with tsdown (outputs ESM + DTS to dist/)
 
-## AI Behavior Rules
+## Architecture
 
-### Essential Rules
+### Immutable Classes (`src/classes/`)
 
-1. **Read before editing** - Always read relevant files before proposing changes
-2. **Don't over-engineer** - Only make changes directly requested
-3. **No speculative features** - Don't add features, refactoring, or "improvements" beyond what's asked
-4. **Minimal complexity** - Use existing patterns; don't create abstractions for one-time operations
-5. **Fix your errors** - If you introduce linter errors, fix them
-6. **Run validation** - Always run `npm run biome:fix && npm run typecheck && npm run test` after changes
+All domain objects are immutable with `static create()` factories and `toJSON()` for plain data. Classes use `deepFreeze()` internally and return `structuredClone()` from `toJSON()` to prevent mutation.
 
-### Code Patterns
+### Zod Schemas (`src/schemas.ts`)
 
-1. **TypeScript everywhere** - No `any` types without justification
-2. **Explicit interfaces** - Prefer interfaces in `src/types.ts` or colocated `types.ts` files
-3. **Biome defaults** - 2-space indentation, double quotes, trailing commas
-4. **Zod for validation** - Use Zod schemas for runtime validation alongside TypeScript types (zod is a peer dependency)
-5. **Build-free dev** - Development workflow uses TypeScript directly (no build step); tsdown only for distribution builds
-6. **No JS Date object** - Never use `new Date()` or the `Date` object; use `@js-temporal/polyfill` with `Temporal.Now.instant().toString()` for timestamps
+The statement schema is a union on `status` field, with each variant enforcing which fields are allowed/required. `StatementData` and `OpenVexDocumentData` types are manually defined (not `z.infer<>`) to work around DTS serialization limits (TS7056) caused by complex passthrough schemas.
 
-### Testing
+### Error Handling (`src/errors.ts`)
 
-1. **Unit tests for pure functions** - Test inputs/outputs without collaborators
-2. **Tests in tests/ directory** - Place all test files in `tests/` directory (not beside code)
-3. **Test naming** - Use `*.test.ts` or `*.spec.ts` naming convention
-4. **Test real examples** - Use real OpenVEX examples from spec/vexctl repos when possible
+All validation failures throw `OpenVexValidationError` with an `issues` array. The `throwValidationError()` helper converts `z.SafeParseError` to `OpenVexValidationError` surfacing all Zod issues.
 
-### Commits
+### Test Structure (`tests/`)
 
-1. **Conventional commits** - Use `feat:`, `fix:`, `chore:`, etc.
-2. **Scoped prefixes** - Use `feat(types):`, `fix(validation):`, `chore(build):` etc.
-3. **Imperative mood** - "add feature" not "added feature"
+Integration tests compare library output against the reference `vexctl` CLI. Test fixtures in `tests/fixtures/` are JSON files containing both `vexctl` CLI options and `library` options. The `normalizeDocument` helper strips non-deterministic fields (timestamps, IDs) before comparison.
 
----
+Fixture categories: `validVexctlFixtureTests` (compared against vexctl output) and `errorVexctlFixtureTests` (both library and vexctl should error). Library-only fixtures test features beyond vexctl's capabilities.
 
-## Project Conventions
+## Conventions
 
-### Directory Structure
-
-```bash
-openvex-js/
-├── src/
-│   ├── index.ts              # Main entry point (exports everything)
-│   ├── types.ts              # TypeScript type definitions
-│   ├── schemas.ts            # Zod validation schemas
-│   ├── document.ts           # Document class/utilities
-│   ├── statement.ts          # Statement class/utilities
-│   ├── product.ts            # Product/Component types and utilities
-│   ├── vulnerability.ts      # Vulnerability types and utilities
-│   └── validation.ts         # Validation utilities
-├── tests/                    # All test files
-│   └── ...
-├── docs/                     # Documentation
-├── package.json
-├── tsconfig.json             # TypeScript config (noEmit for dev)
-├── tsdown.config.ts          # Build config for distribution
-├── biome.json                # Linting/formatting
-└── vitest.config.ts          # Test configuration
-```
-
----
-
-## Essential Commands
-
-| Command | Purpose |
-| ------- | ------- |
-| `npm run typecheck` | TypeScript type checking (no emit) |
-| `npm run test` | Run all tests |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run test:coverage` | Run tests with coverage report |
-| `npm run biome:fix` | Auto-fix linting and formatting issues |
-| `npm run biome` | Check linting and formatting (no fix) |
-| `npm run build` | Build distribution files (ESM, CJS, types) |
-| `npm run dev` | Watch mode for build (optional) |
-
----
-
-## Development Workflow
-
-### Build-Free Development
-
-- Write TypeScript directly in `src/` - no build step needed during development
-- Run `npm run typecheck` to validate types
-- Run `npm run test` to run tests
-- Run `npm run biome:fix` before committing
-
-### Building for Distribution
-
-- Run `npm run build` to create `dist/` with ESM, CJS, and type definitions
-- Only needed when publishing to npm
-- Uses tsdown to generate both module formats and declarations
-
----
-
-## AI-Specific Instructions
-
-### Over-Eagerness Prevention
-
-- **Don't add features** beyond what's requested
-- **Don't refactor** surrounding code when fixing a bug
-- **Don't add error handling** for scenarios that can't happen
-- **Don't create helpers** for one-time operations
-- **Don't design** for hypothetical future requirements
-
-### Tool Usage
-
-- Use `read_file` before proposing edits
-- Use `codebase_search` for "how/where/what" questions
-- Use `grep` for exact symbol searches
-- Prefer editing existing files over creating new ones
-
----
-
-## Testing Quick Reference
-
-- Favor unit tests for pure functions where inputs and outputs can be asserted without collaborators
-- Place all test files in `tests/` directory
-- Use real OpenVEX examples from the spec or vexctl repos when testing
-- Test both TypeScript types and Zod schema validation
-- Use descriptive test names that explain what is being tested
-
----
-
-## Coding Style & Naming Conventions
-
-- Target Node 24+ ES modules, TypeScript strictness, and Biome defaults
-- Name files with kebab-case for scripts and PascalCase for exported TypeScript classes
-- Use descriptive directory names for bounded contexts
-- Prefer explicit interfaces; avoid `any`
-- Keep Zod schemas in sync with TypeScript types
-
----
-
-## OpenVEX-Specific Guidelines
-
-### Type Definitions
-
-- Match the official OpenVEX JSON schema structure
-- Support all status values: `not_affected`, `affected`, `fixed`, `under_investigation`
-- Handle multiple identifier types (purl, cpe22, cpe23)
-- Support inheritance flow (document timestamp cascading to statements)
-
-### Validation
-
-- Use Zod schemas for runtime validation
-- Validate against the official OpenVEX JSON schema structure
-- Provide clear error messages for validation failures
-- Zod is a peer dependency, allowing consumers to control the version
-
----
+- **pnpm** for package management (not npm)
+- Biome for linting/formatting: double quotes, 2-space indent, 120 char line width
+- `noConsole` rule enabled (library code should not use console; `scripts/` is exempt)
+- `verbatimModuleSyntax` is enabled — use `import type` for type-only imports
+- `.js` extensions in import paths (required by NodeNext module resolution)
+- Never use `new Date()` — use `Temporal.Now.instant().toString()` from `@js-temporal/polyfill`
+- Changesets for versioning/changelog — run `pnpm changeset` to describe changes before merging

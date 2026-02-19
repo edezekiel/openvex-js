@@ -7,5 +7,5 @@
     "author": "Test Author",
     "actionStatement": "should not be set"
   },
-  "expectedError": "Unrecognized key(s) in object: 'action_statement', 'action_statement_timestamp'"
+  "expectedError": "action_statement is not allowed when status is fixed"
 }

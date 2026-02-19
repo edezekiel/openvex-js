@@ -7,5 +7,5 @@
     "author": "Test Author",
     "impactStatement": "should not be set"
   },
-  "expectedError": "Unrecognized key(s) in object: 'impact_statement'"
+  "expectedError": "impact_statement is not allowed when status is under_investigation"
 }

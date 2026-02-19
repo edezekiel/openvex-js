@@ -1,8 +1,10 @@
 import { Temporal } from "@js-temporal/polyfill";
-import type { Justification, Statement, StatementStatus } from "../schemas.js";
+import { OpenVexValidationError, throwValidationError } from "../errors.js";
+import type { Justification, StatementData, StatementStatus } from "../schemas.js";
 import { statementSchema } from "../schemas.js";
-import { ComponentBuilder, type SubcomponentInput } from "./component.js";
-import { VulnerabilityBuilder } from "./vulnerability.js";
+import { deepFreeze } from "../utils.js";
+import { Component, type SubcomponentInput } from "./component.js";
+import { Vulnerability } from "./vulnerability.js";
 
 export type ProductInput =
   | string
@@ -12,50 +14,73 @@ export type ProductInput =
       hashes?: Record<string, string>;
     };
 
+export type VulnerabilityInput =
+  | string
+  | {
+      name: string;
+      id?: string;
+      description?: string;
+      aliases?: string[];
+    };
+
 export interface CreateStatementOptions {
-  vulnerability: string;
+  vulnerability: VulnerabilityInput;
   status: StatementStatus;
   products: ProductInput[];
+  id?: string;
+  version?: number;
+  lastUpdated?: string;
   aliases?: string[];
   justification?: Justification;
   actionStatement?: string;
   impactStatement?: string;
-  statusNote?: string;
+  statusNotes?: string;
   supplier?: string;
   timestamp?: string;
 }
 
-export class StatementBuilder {
-  readonly #data: Readonly<Statement>;
+export class Statement {
+  readonly #data: Readonly<StatementData>;
 
-  private constructor(data: Statement) {
-    this.#data = Object.freeze({ ...data });
+  private constructor(data: StatementData) {
+    this.#data = deepFreeze({ ...data });
   }
 
-  static create(options: CreateStatementOptions): StatementBuilder {
+  static create(options: CreateStatementOptions): Statement {
     const timestamp = options.timestamp ?? Temporal.Now.instant().toString();
-    return new StatementBuilder(StatementBuilder.buildStatementData(options, timestamp));
+    return new Statement(Statement.buildStatementData(options, timestamp));
   }
 
-  private static buildStatementData(options: CreateStatementOptions, timestamp: string): Statement {
+  private static buildStatementData(options: CreateStatementOptions, timestamp: string): StatementData {
     if (options.products.length === 0) {
-      throw new Error("at least one product is required");
+      throw new OpenVexValidationError("at least one product is required");
     }
 
-    const products = options.products.map((p) => ComponentBuilder.create(p).toData());
+    const products = options.products.map((p) => Component.create(p).toJSON());
 
-    const vulnerability = VulnerabilityBuilder.create({
-      name: options.vulnerability,
-      aliases: options.aliases,
-    }).toData();
+    const vulnerability =
+      typeof options.vulnerability === "string"
+        ? Vulnerability.create({
+            name: options.vulnerability,
+            aliases: options.aliases,
+          }).toJSON()
+        : Vulnerability.create({
+            name: options.vulnerability.name,
+            id: options.vulnerability.id,
+            description: options.vulnerability.description,
+            aliases: options.vulnerability.aliases ?? options.aliases,
+          }).toJSON();
 
     const statementData: unknown = {
       vulnerability,
       products,
       status: options.status,
       timestamp,
+      ...(options.id && { "@id": options.id }),
+      ...(options.version && { version: options.version }),
+      ...(options.lastUpdated && { last_updated: options.lastUpdated }),
       ...(options.supplier && { supplier: options.supplier }),
-      ...(options.statusNote && { status_notes: options.statusNote }),
+      ...(options.statusNotes && { status_notes: options.statusNotes }),
       ...(options.justification && { justification: options.justification }),
       ...(options.impactStatement && { impact_statement: options.impactStatement }),
       ...(options.actionStatement && {
@@ -66,14 +91,13 @@ export class StatementBuilder {
 
     const result = statementSchema.safeParse(statementData);
     if (!result.success) {
-      const firstIssue = result.error.issues[0];
-      throw new Error(firstIssue?.message ?? "Invalid statement");
+      throwValidationError(result);
     }
 
     return result.data;
   }
 
-  toData(): Statement {
+  toJSON(): StatementData {
     return structuredClone(this.#data);
   }
 }
