@@ -1,41 +1,41 @@
 import { createHash } from "node:crypto";
 import { Temporal } from "@js-temporal/polyfill";
-import { OpenVexValidationError } from "../errors.js";
-import type { OpenVexDocument, Statement } from "../schemas.js";
+import { OpenVexValidationError, throwValidationError, type ValidationIssue } from "../errors.js";
+import type { OpenVexDocumentData, StatementData, StatementStatus } from "../schemas.js";
 import { openVexDocumentSchema } from "../schemas.js";
-import { type CreateStatementOptions, StatementBuilder } from "./statement.js";
+import { deepFreeze } from "../utils.js";
+import { type CreateStatementOptions, Statement } from "./statement.js";
 
 export interface CreateDocumentOptions {
   author?: string;
   role?: string;
   id?: string;
+  tooling?: string;
   statements: CreateStatementOptions[];
 }
 
 type OpenVexDocumentWithoutId = Pick<
-  OpenVexDocument,
+  OpenVexDocumentData,
   "@context" | "author" | "timestamp" | "version" | "statements" | "role" | "last_updated" | "tooling"
 >;
 
 export type { SubcomponentInput } from "./component.js";
-export type { CreateStatementOptions, ProductInput } from "./statement.js";
+export type { CreateStatementOptions, ProductInput, VulnerabilityInput } from "./statement.js";
 
-export class DocumentBuilder {
-  readonly #data: Readonly<OpenVexDocument>;
+export class Document {
+  readonly #data: Readonly<OpenVexDocumentData>;
 
-  private constructor(data: OpenVexDocument) {
-    this.#data = Object.freeze({ ...data });
+  private constructor(data: OpenVexDocumentData) {
+    this.#data = deepFreeze({ ...data });
   }
 
-  static create(options: CreateDocumentOptions): DocumentBuilder {
+  static create(options: CreateDocumentOptions): Document {
     if (options.statements.length === 0) {
-      throw new Error("at least one statement is required");
+      throw new OpenVexValidationError("at least one statement is required");
     }
 
     const timestamp = Temporal.Now.instant().toString();
-    const statements: Statement[] = options.statements.map((s) =>
-      StatementBuilder.create({ ...s, timestamp }).toData(),
-    );
+    const statements: StatementData[] = options.statements.map((s) => Statement.create({ ...s, timestamp }).toJSON());
 
     const docWithoutId: OpenVexDocumentWithoutId = {
       "@context": "https://openvex.dev/ns/v0.2.0",
@@ -44,11 +44,12 @@ export class DocumentBuilder {
       version: 1,
       statements,
       ...(options.role && { role: options.role }),
+      ...(options.tooling && { tooling: options.tooling }),
     };
 
-    const id = options.id || DocumentBuilder.buildCanonicalId(docWithoutId);
-    const document: OpenVexDocument = { ...docWithoutId, "@id": id };
-    return new DocumentBuilder(document);
+    const id = options.id || Document.buildCanonicalId(docWithoutId);
+    const document: OpenVexDocumentData = { ...docWithoutId, "@id": id };
+    return new Document(document);
   }
 
   private static buildCanonicalId(doc: OpenVexDocumentWithoutId): string {
@@ -71,26 +72,103 @@ export class DocumentBuilder {
     return `https://openvex.dev/docs/public/vex-${hash}`;
   }
 
-  static parse(input: unknown): DocumentBuilder {
+  static parse(input: unknown): Document {
     const result = openVexDocumentSchema.safeParse(input);
     if (!result.success) {
-      const issues = result.error.issues.map((issue) => ({
-        path: issue.path.length > 0 ? issue.path.join(".") : "root",
-        message: issue.message,
-      }));
-      throw new OpenVexValidationError(
-        `Invalid OpenVEX document: ${issues.map((i) => `${i.path}: ${i.message}`).join("; ")}`,
-        issues,
-      );
+      throwValidationError(result);
     }
-    return new DocumentBuilder(result.data);
+    return new Document(result.data);
   }
 
-  toJSON(): string {
-    return JSON.stringify(this.#data, null, 2);
+  static fromJSON(json: string): Document {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      throw new OpenVexValidationError("Invalid JSON string");
+    }
+    return Document.parse(parsed);
   }
 
-  toData(): OpenVexDocument {
+  static validate(input: unknown): ValidationIssue[] {
+    const result = openVexDocumentSchema.safeParse(input);
+    if (result.success) {
+      return [];
+    }
+    return result.error.issues.map((issue) => ({
+      path: issue.path.length > 0 ? issue.path.join(".") : "root",
+      message: issue.message,
+    }));
+  }
+
+  static merge(docs: Document[], options?: { author?: string; id?: string }): Document {
+    if (docs.length === 0) {
+      throw new OpenVexValidationError("at least one document is required for merge");
+    }
+
+    const allStatements: StatementData[] = docs.flatMap((doc) => doc.#data.statements);
+
+    if (allStatements.length === 0) {
+      throw new OpenVexValidationError("merged documents must contain at least one statement");
+    }
+
+    const timestamp = Temporal.Now.instant().toString();
+    const docWithoutId: OpenVexDocumentWithoutId = {
+      "@context": "https://openvex.dev/ns/v0.2.0",
+      // biome-ignore lint/style/noNonNullAssertion: length check above guarantees docs[0] exists
+      author: options?.author ?? docs[0]!.#data.author,
+      timestamp,
+      version: 1,
+      statements: allStatements,
+    };
+
+    const id = options?.id || Document.buildCanonicalId(docWithoutId);
+    const document: OpenVexDocumentData = { ...docWithoutId, "@id": id };
+    return new Document(document);
+  }
+
+  addStatement(options: CreateStatementOptions): Document {
+    const timestamp = Temporal.Now.instant().toString();
+    const newStatement = Statement.create({ ...options, timestamp }).toJSON();
+
+    const newVersion = this.#data.version + 1;
+    const docWithoutId: OpenVexDocumentWithoutId = {
+      "@context": this.#data["@context"],
+      author: this.#data.author,
+      timestamp: this.#data.timestamp,
+      last_updated: timestamp,
+      version: newVersion,
+      statements: [...this.#data.statements, newStatement],
+      ...(this.#data.role && { role: this.#data.role }),
+      ...(this.#data.tooling && { tooling: this.#data.tooling }),
+    };
+
+    const id = Document.buildCanonicalId(docWithoutId);
+    const document: OpenVexDocumentData = { ...docWithoutId, "@id": id };
+    return new Document(document);
+  }
+
+  getStatements(): StatementData[] {
+    return structuredClone(this.#data.statements) as StatementData[];
+  }
+
+  getStatementsByVulnerability(name: string): StatementData[] {
+    return this.getStatements().filter((s) => s.vulnerability.name === name);
+  }
+
+  getStatementsByProduct(id: string): StatementData[] {
+    return this.getStatements().filter((s) => s.products?.some((p) => p["@id"] === id));
+  }
+
+  getStatementsByStatus(status: StatementStatus): StatementData[] {
+    return this.getStatements().filter((s) => s.status === status);
+  }
+
+  toJSON(): OpenVexDocumentData {
     return structuredClone(this.#data);
+  }
+
+  serialize(): string {
+    return JSON.stringify(this.#data, null, 2);
   }
 }

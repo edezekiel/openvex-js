@@ -27,20 +27,26 @@ jobs:
         run: biome ci
 
   build-and-test:
-    name: Build and Test
+    name: Build and Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22, 24]
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Use Node.js
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
-          node-version-file: ".nvmrc"
-          cache: "npm"
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Get vexctl version
         id: vexctl-version
@@ -61,16 +67,16 @@ jobs:
 
       - name: Install vexctl
         if: steps.cache-vexctl.outputs.cache-hit != 'true'
-        run: npm run install-vexctl
+        run: pnpm run install-vexctl
 
       - name: Make vexctl executable
         run: chmod +x .bin/vexctl
 
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm run typecheck
 
       - name: Run tests
-        run: npm test
+        run: pnpm test
 
       - name: Build
-        run: npm run build
+        run: pnpm run build

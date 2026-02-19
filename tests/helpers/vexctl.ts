@@ -52,7 +52,7 @@ export function vexctlOptionsToCreateDocumentOptions(options: VexCtlOptions): Cr
         justification: options.justification,
         actionStatement: options.actionStatement,
         impactStatement: options.impactStatement,
-        statusNote: options.statusNote,
+        statusNotes: options.statusNote,
         supplier: options.supplier,
       },
     ],
@@ -100,7 +100,7 @@ export function runVexCtlCreate(options: VexCtlOptions): unknown {
   const localVexCtl = join(process.cwd(), ".bin", "vexctl");
 
   if (!existsSync(localVexCtl)) {
-    throw new Error(`vexctl binary not found at ${localVexCtl}. Please run 'npm run install-vexctl' to install it.`);
+    throw new Error(`vexctl binary not found at ${localVexCtl}. Please run 'pnpm run install-vexctl' to install it.`);
   }
 
   try {

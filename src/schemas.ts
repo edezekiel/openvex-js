@@ -181,7 +181,47 @@ const underInvestigationStatementSchema = baseStatementSchema
     }
   });
 
-export const statementSchema = z.union([
+export type StatementStatus = z.infer<typeof statementStatusSchema>;
+export type Justification = z.infer<typeof justificationSchema>;
+export type HashAlgorithm = keyof z.infer<typeof hashesSchema>;
+export type Hashes = z.infer<typeof hashesSchema>;
+export type Identifiers = z.infer<typeof identifiersSchema>;
+export type SubcomponentData = z.infer<typeof subcomponentSchema>;
+export type ComponentData = z.infer<typeof componentSchema>;
+export type VulnerabilityData = z.infer<typeof vulnerabilitySchema>;
+
+// Statement and document types defined manually to avoid TS7056 DTS serialization limit
+export type StatementData = {
+  vulnerability: VulnerabilityData;
+  status: StatementStatus;
+  timestamp?: string;
+  last_updated?: string;
+  products?: ComponentData[];
+  supplier?: string;
+  status_notes?: string;
+  justification?: Justification;
+  impact_statement?: string;
+  action_statement?: string;
+  action_statement_timestamp?: string;
+  "@id"?: string;
+  version?: number;
+  [key: string]: unknown;
+};
+
+export type OpenVexDocumentData = {
+  "@context": string;
+  "@id": string;
+  author: string;
+  role?: string;
+  timestamp: string;
+  last_updated?: string;
+  version: number;
+  tooling?: string;
+  statements: StatementData[];
+  [key: string]: unknown;
+};
+
+export const statementSchema: z.ZodType<StatementData> = z.union([
   notAffectedStatementSchema,
   affectedStatementSchema,
   fixedStatementSchema,
@@ -192,7 +232,7 @@ const contextSchema = z.string().regex(/^https:\/\/openvex\.dev\/ns\/v\d+\.\d+\.
   message: "@context must be a valid OpenVEX context URL (https://openvex.dev/ns/v<version>)",
 });
 
-export const openVexDocumentSchema = z
+export const openVexDocumentSchema: z.ZodType<OpenVexDocumentData> = z
   .object({
     "@context": contextSchema,
     "@id": z.string().url(),
@@ -207,14 +247,3 @@ export const openVexDocumentSchema = z
   .passthrough();
 
 export { identifierInputSchema, vulnerabilitySchema };
-
-export type StatementStatus = z.infer<typeof statementStatusSchema>;
-export type Justification = z.infer<typeof justificationSchema>;
-export type HashAlgorithm = keyof z.infer<typeof hashesSchema>;
-export type Hashes = z.infer<typeof hashesSchema>;
-export type Identifiers = z.infer<typeof identifiersSchema>;
-export type Subcomponent = z.infer<typeof subcomponentSchema>;
-export type Component = z.infer<typeof componentSchema>;
-export type Vulnerability = z.infer<typeof vulnerabilitySchema>;
-export type Statement = z.infer<typeof statementSchema>;
-export type OpenVexDocument = z.infer<typeof openVexDocumentSchema>;
