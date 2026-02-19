@@ -1,6 +1,6 @@
 {
   "name": "openvex-js",
-  "version": "0.0.1-beta.0",
+  "version": "0.0.1",
   "description": "TypeScript implementation of the OpenVEX specification",
   "type": "module",
   "packageManager": "pnpm@10.21.0",

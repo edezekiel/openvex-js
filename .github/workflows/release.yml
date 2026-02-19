@@ -34,12 +34,9 @@ jobs:
       - name: Build
         run: pnpm run build
 
-      - name: Create Release Pull Request
-        id: changesets
+      - name: Create Release Pull Request or Publish
         uses: changesets/action@v1
+        with:
+          publish: npm publish --provenance --access public
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to npm (OIDC)
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: npm publish --provenance --access public
