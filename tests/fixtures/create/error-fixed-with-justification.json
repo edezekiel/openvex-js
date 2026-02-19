@@ -7,5 +7,5 @@
     "author": "Test Author",
     "justification": "component_not_present"
   },
-  "expectedError": "Unrecognized key(s) in object: 'justification'"
+  "expectedError": "justification is not allowed when status is fixed"
 }

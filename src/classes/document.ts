@@ -12,6 +12,11 @@ export interface CreateDocumentOptions {
   statements: CreateStatementOptions[];
 }
 
+type OpenVexDocumentWithoutId = Pick<
+  OpenVexDocument,
+  "@context" | "author" | "timestamp" | "version" | "statements" | "role" | "last_updated" | "tooling"
+>;
+
 export type { SubcomponentInput } from "./component.js";
 export type { CreateStatementOptions, ProductInput } from "./statement.js";
 
@@ -32,7 +37,7 @@ export class DocumentBuilder {
       StatementBuilder.create({ ...s, timestamp }).toData(),
     );
 
-    const docWithoutId: Omit<OpenVexDocument, "@id"> = {
+    const docWithoutId: OpenVexDocumentWithoutId = {
       "@context": "https://openvex.dev/ns/v0.2.0",
       author: options.author ?? "Unknown Author",
       timestamp,
@@ -42,10 +47,11 @@ export class DocumentBuilder {
     };
 
     const id = options.id || DocumentBuilder.buildCanonicalId(docWithoutId);
-    return new DocumentBuilder({ ...docWithoutId, "@id": id });
+    const document: OpenVexDocument = { ...docWithoutId, "@id": id };
+    return new DocumentBuilder(document);
   }
 
-  private static buildCanonicalId(doc: Omit<OpenVexDocument, "@id">): string {
+  private static buildCanonicalId(doc: OpenVexDocumentWithoutId): string {
     const { timestamp: _timestamp, last_updated: _last_updated, ...rest } = doc;
     const hash = createHash("sha256")
       .update(

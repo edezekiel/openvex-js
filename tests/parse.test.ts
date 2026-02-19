@@ -30,4 +30,15 @@ describe("parseDocumentBuilder", () => {
     const invalid = JSON.parse('{"@context": "https://openvex.dev/ns/v0.2.0"}');
     expect(() => DocumentBuilder.parse(invalid)).toThrow();
   });
+
+  it("should preserve unknown properties at document root", () => {
+    const fixture = loadFixture("create/basic-fixed.json");
+    const vexctlDoc = runVexCtlCreate(fixture.vexctl!) as Record<string, unknown>;
+    const docWithExtra = { ...vexctlDoc, test: "extra-property-value" };
+
+    const parsed = DocumentBuilder.parse(docWithExtra);
+    const parsedData = parsed.toData() as Record<string, unknown>;
+
+    expect(parsedData["test"]).toBe("extra-property-value");
+  });
 });
