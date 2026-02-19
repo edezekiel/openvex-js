@@ -48,6 +48,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Enable TypeScript stripping for older Node
+        if: matrix.node-version < 23
+        run: echo "NODE_OPTIONS=--experimental-strip-types" >> $GITHUB_ENV
+
       - name: Get vexctl version
         id: vexctl-version
         run: |
